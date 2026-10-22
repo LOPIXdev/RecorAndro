@@ -93,7 +93,7 @@ def canonical_model(directory, record, audio_view):
     warnings = sorted(set(w for w in warnings if w != 'media_eligibility_pending'))
     artifacts = []
     for key, entry in sorted(audio_view['artifact_registry'].items()):
-        if entry['status'] == 'verified' and entry['type'] not in ('manifest', 'report'):
+        if entry['status'] == 'verified' and entry['type'] not in ('manifest', 'report', 'original_photo'):
             artifacts.append({k: entry[k] for k in ('artifact_id', 'type', 'relative_path', 'sha256',
                              'size_bytes', 'source_artifact_id', 'revision_id', 'classification', 'status')})
     model = dict(schema_version=SCHEMA_VERSION, session_id=record['session_id'], profile=record['profile'],
@@ -117,8 +117,9 @@ def canonical_model(directory, record, audio_view):
                  timeline={'origin': 'immutable_original_source', 'original_duration_seconds': record['inspection']['media']['duration_seconds'],
                     'working_source_end_seconds': plan['source_duration_seconds'], 'note': TIMELINE_NOTE,
                     'ownership_duration_seconds': plan['source_duration_seconds']},
-                 visual_count=record['visual_count'], visual_status='none' if record['visual_count'] == 0 else
-                    record.get('visual_status', 'pending'),
+                 visual_count=record.get('document_visuals', record)['visual_count'],
+                 visual_status=record.get('document_visuals', {}).get('visual_status',
+                    'none' if record['visual_count'] == 0 else record.get('visual_status', 'pending')),
                  artifacts=artifacts, parts=parts,
                  storage_preflight={'import': record['storage_preflight'], 'normalization': norm.get('storage_preflight'),
                                     'audio_export': exported.get('storage_preflight')},

@@ -89,10 +89,14 @@ def archive_decision(record):
             'provenance': initial.get('provenance')}
 
 
-def archive_specs(record, documents_view):
+def archive_specs(record, documents_view, directory=None):
     # Keep exact session-relative locations so current source/report references
     # remain recoverable. ZIPs are rebuildable and deliberately not nested.
     snapshot = deepcopy(documents_view)
+    if record.get('photos') and directory is not None:
+        from .visuals import entries
+        visual_entries, _ = entries(directory, record, strict=True)
+        snapshot['artifact_registry'].update(visual_entries)
     for key in ('package_generation', 'full_archive', 'updated_at'):
         snapshot.pop(key, None)
     snapshot['artifact_registry'] = {key: entry for key, entry in snapshot['artifact_registry'].items()
@@ -379,7 +383,7 @@ def archive_session(config, session_id, *, decision=None, retry=False, _lock_tok
         view = project_session(directory, record, _packages_only=True)
         require(view['last_successful_state'] == 'packaged', 'All current part ZIPs must verify before full archive creation.')
         documents_view = project_session(directory, record, _documents_only=True)
-        specs = archive_specs(record, documents_view)
+        specs = archive_specs(record, documents_view, directory)
         existing = sum(e['size_bytes'] for e in view['artifact_registry'].values() if e['status'] == 'verified')
         return _generate(directory, record, specs, 'full_archive', directory.free_bytes, existing)
 
@@ -413,7 +417,7 @@ def project_packages(directory, record, view, *, packages_only=False):
                         error_code='invalid_package_evidence', error_message='Current part ZIP set is incomplete, stale or invalid.', retryable=True)
     if not packages_only and view['last_successful_state'] == 'packaged' and choice['decision'] == 'explicit_on' and record.get('full_archive') is not None:
         try:
-            specs = archive_specs(record, documents_view)
+            specs = archive_specs(record, documents_view, directory)
             entries, complete, invalid, saved = verified_stage(directory, record, specs, 'full_archive')
             view['artifact_registry'].update(entries)
             view['archive_status'].update(status='archived' if complete else saved['status'], preflight=saved.get('preflight'),

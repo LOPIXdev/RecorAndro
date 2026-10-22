@@ -1,0 +1,14 @@
+{
+  "ALL_PASS": true,
+  "session_id": "3542e8a16e12479c840fbed5c7fe78bb",
+  "photo_fixture": "Real JPEG encoded by FFmpeg; not a camera/device measurement",
+  "visual_count": 1,
+  "visual_status": "indexed",
+  "current_state": "packaged",
+  "zero_photo_tree_identical": true,
+  "zero_photo_metadata_identical": true,
+  "zero_photo_visual_artifacts": 0,
+  "zero_photo_visual_warnings": 0,
+  "prior_artifact_bytes_unchanged": true,
+  "stale_archive_replaced": true
+}

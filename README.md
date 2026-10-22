@@ -146,10 +146,10 @@ python -m recorandro manifest-session "$session_id"
 
 Repeated generation is a verified no-op. See [schema, publication/recovery and exact Redmi
 validation](docs/MANIFEST_SCHEMA.md).
-Visual processing and final UI remain unimplemented.
+Final UI remains unimplemented.
 
-Step 4.1 received FINAL PASS (265/265 Android tests). Step 4.2 is a candidate
-adding deterministic audio-only part ZIPs and an optional compact full archive:
+Step 4.1 received FINAL PASS (265/265 Android tests). Step 4.2 received FINAL PASS
+(285/285 Android tests), adding deterministic audio-only part ZIPs and an optional compact full archive:
 
 ```sh
 python -m recorandro package-session "$session_id"
@@ -159,5 +159,10 @@ python -m recorandro archive-session "$session_id" --decision on
 Resume reaches the required `packaged` frontier. Archive outcomes remain separate
 and nonblocking; unresolved Lecture defaults never trigger archive creation.
 See [package/archive policy, storage check and controlled Redmi measurements](docs/PACKAGE_AND_ARCHIVE.md).
-Independent review, Redmi validation and explicit FINAL PASS remain required.
-No commit/push, visual subsystem, final UI or Part 3 work yet.
+The accepted lecture archive contained 18 members and 103,143,715 bytes. The
+Lecture archive default remains OPEN pending later real-device decisions.
+
+Step 5.1 is an optional photo-attachment candidate. Zero-photo sessions require
+no migration or visual files. See [intake/index/archive semantics and Redmi
+validation](docs/VISUAL_ATTACHMENTS.md). Photo metadata is a timing hint only;
+audio part ZIPs remain unchanged. Independent review and Redmi FINAL PASS pending.

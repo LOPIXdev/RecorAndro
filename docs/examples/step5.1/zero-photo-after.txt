@@ -1,0 +1,17 @@
+.inspection.lock
+generated/exports/596ed2ac84714ef791dd21040a407fa7/part_01.m4a
+generated/exports/596ed2ac84714ef791dd21040a407fa7/session.json
+generated/full_archive/bda684164040477886ecfdc1311e2f2e/full_archive.zip
+generated/full_archive/bda684164040477886ecfdc1311e2f2e/session.json
+generated/manifests/b7e7fd8dc7264a588571cc823b942d02/manifest.json
+generated/manifests/b7e7fd8dc7264a588571cc823b942d02/manifest.md
+generated/manifests/b7e7fd8dc7264a588571cc823b942d02/parts/part_01/manifest.json
+generated/manifests/b7e7fd8dc7264a588571cc823b942d02/parts/part_01/manifest.md
+generated/manifests/b7e7fd8dc7264a588571cc823b942d02/processing_report.md
+generated/manifests/b7e7fd8dc7264a588571cc823b942d02/session.json
+generated/normalization/e6ba32b743f1484c8fc235e539e0ed7d/session.json
+generated/package_generation/c77230be6cdc418d8836eadd71924ed1/part_01.zip
+generated/package_generation/c77230be6cdc418d8836eadd71924ed1/session.json
+generated/segmentation/dbfd085ac268426591223424f9c29beb/session.json
+originals/audio/audio.wav
+session.json

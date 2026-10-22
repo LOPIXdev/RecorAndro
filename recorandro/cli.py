@@ -76,12 +76,25 @@ def main(argv=None) -> int:
     retry = commands.add_parser("retry", help="Retry the required stage; verified stages are unchanged")
     retry.add_argument("session_id")
     retry.add_argument("stage", nargs="?", choices=RETRY_STAGES)
+    photos = commands.add_parser('import-photos', help='Optional immutable session-level photo intake; audio retained on failure')
+    photos.add_argument('session_id')
+    photos.add_argument('paths', nargs='*')
     args = parser.parse_args(argv)
     try:
         config = load_config(args.config)
     except ConfigError as exc:
         print(f"Configuration error: {exc}", file=sys.stderr)
         return 2
+    if args.command == 'import-photos':
+        from .visuals import import_photos
+        try:
+            result = import_photos(config, args.session_id, args.paths)
+        except (ValueError, OSError) as exc:
+            print(json.dumps(dict(ok=False, status='failed_nonblocking', audio_only_continuation=True,
+                                  error=str(exc)), ensure_ascii=False, indent=2))
+            return 1
+        print(json.dumps(dict(ok=True, result=result), ensure_ascii=False, indent=2))
+        return 0
     if args.command in ('package-session', 'archive-session'):
         try:
             operation = package_session if args.command == 'package-session' else archive_session

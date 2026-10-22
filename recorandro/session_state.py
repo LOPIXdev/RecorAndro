@@ -371,6 +371,15 @@ def project_session(directory, record, *, _normalization_intent=False, _audio_on
     if not _audio_only and not _documents_only and result['last_successful_state'] == 'manifested':
         from .packages import project_packages
         project_packages(directory, record, result, packages_only=_packages_only)
+    if record.get('photos'):
+        from .visuals import entries
+        visual_entries, invalid = entries(directory, record)
+        for key in list(registry):
+            if registry[key]['type'] == 'original_photo' or key == 'visual_index':
+                registry.pop(key)
+        registry.update(visual_entries)
+        result['visual_status'] = 'failed_nonblocking' if invalid else record.get('visual_status', 'indexed')
+        result['visual_errors'] = invalid
     return result
 
 
@@ -388,6 +397,21 @@ def prepare_session(directory, record):
             _require(all(previous["audio"].get(k) == record["audio"].get(k) for k in IDENTITY_KEYS),
                      "Original audio identity is immutable after import")
             _require(record["state"] == "imported", "Legacy imported state is immutable")
+        old_photos = previous.get('photos', [])
+        _require(record.get('photos', [])[:len(old_photos)] == old_photos,
+                 'Managed original photo identities are immutable and append-only')
+    if record.get('photos'):
+        photos = record['photos']
+        _require(record['visual_count'] == len(photos), 'Photo count mismatch')
+        paths = set()
+        for number, photo in enumerate(photos, 1):
+            path = photo.get('relative_path', '')
+            pieces = path.split('/')
+            _require(photo.get('visual_id') == f'V{number:03}' and len(pieces) == 4 and
+                     pieces[:2] == ['originals', 'photos'] and UUID.fullmatch(pieces[2]) and
+                     pieces[3].split('.')[0] == photo['visual_id'] and path not in paths,
+                     'Unsafe or colliding managed photo identity')
+            paths.add(path)
     result = project_session(directory, record)
     result["updated_at"] = datetime.now(timezone.utc).isoformat()
     return result
@@ -428,6 +452,8 @@ def session_status(config, session_id):
                               ("status", "mode_requested", "decision", "gain_db", "output_source", "normalization_applied")},
             "segmentation": record.get("segmentation"), "part_count": view["verified_part_count"],
             "artifacts": view["artifact_registry"], "visual_count": record["visual_count"],
+            "visual_status": view.get('visual_status', 'not_present'),
+            "visual_errors": view.get('visual_errors', []),
             "package_status": view["package_status"], "archive_status": view["archive_status"],
             "errors": [] if view["error_code"] is None else [{"stage": view["failed_stage"],
                        "code": view["error_code"], "message": view["error_message"], "retryable": view["retryable"]}],
