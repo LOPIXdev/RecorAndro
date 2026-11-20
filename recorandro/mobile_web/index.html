@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RecorAndro feasibility</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body><main><h1>RecorAndro</h1><p>Local audio-only feasibility prototype. Select an existing recording.</p>
+<section><h2>Select</h2><label>One recording <input id="audio" type="file" accept=".m4a,.mp3,.wav,.aac"></label><label>Lecture duration budget (seconds, not measured) <input id="budget" type="number" min="1" max="604800" value="7200"></label><p>128 MiB upload limit. Auto processing. Full Archive OFF. No photos required.</p><button id="start" disabled>Start</button><button id="cancel" disabled>Cancel upload</button></section>
+<section><h2>Status / results</h2><p id="notice" role="alert"></p><p id="message" role="status">Connecting…</p><p id="session"></p><p id="details"></p><ul id="parts"></ul><p>ZIPs are downloaded locally. In Chrome: Downloads → ⋮ → Share. Choose a local app. No delivery is claimed until you check it.</p></section>
+<section><h2>Reopen / resume</h2><label>Session ID <input id="sid" maxlength="32" autocomplete="off"></label><button id="open" disabled>Open status</button><button id="resume" disabled>Resume</button></section>
+<button id="stop" disabled>Stop adapter</button><p>Keep the session ID. If the connection is lost, restart the command in Termux, open its new private URL, then reopen this ID. Closing this tab does not cancel processing.</p></main></body></html>

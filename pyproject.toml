@@ -14,3 +14,6 @@ recorandro = "recorandro.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["recorandro*"]
+
+[tool.setuptools.package-data]
+recorandro = ["mobile_web/*.html", "mobile_web/*.js", "mobile_web/*.css"]

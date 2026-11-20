@@ -2,6 +2,8 @@
 
 For one-command import through verified packages, see
 [process-audio usage and recovery](docs/PROCESS_AUDIO.md).
+For the audio-only loopback feasibility GUI, see
+[mobile prototype launch and Redmi checks](docs/MOBILE_UI_PROTOTYPE.md).
 
 Android-first, local-only project. Step 1.1 provides Python configuration and
 environment diagnostics. Step 1.2 adds conservative storage preflight and verified
