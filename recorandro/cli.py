@@ -48,6 +48,14 @@ def main(argv=None) -> int:
     ingest.add_argument("--archive", choices=("profile", "requested", "not_requested"), default="profile")
     ingest.add_argument("--title")
     ingest.add_argument("--course")
+    process = commands.add_parser('process-audio', help='Import one audio and resume to verified packages')
+    process.add_argument('path')
+    process.add_argument('--provision-seconds', required=True, type=int,
+                         help='User-supplied duration budget (1..604800), not measured duration')
+    process.add_argument('--photo', action='append', default=[], help='Optional photo path; repeat for more')
+    process.add_argument('--archive', choices=('on', 'off'), default='off')
+    process.add_argument('--title')
+    process.add_argument('--course')
     inspect = commands.add_parser("inspect-session", help="Inspect a verified managed original; no decoding")
     inspect.add_argument("session_id")
     inspect.add_argument("--retry", action="store_true", help="Explicitly retry failed/interrupted inspection")
@@ -85,6 +93,22 @@ def main(argv=None) -> int:
     except ConfigError as exc:
         print(f"Configuration error: {exc}", file=sys.stderr)
         return 2
+    if args.command == 'process-audio':
+        from .workflow import process_audio
+        prefix = [sys.executable, '-m', 'recorandro'] + (
+            ['--config', args.config] if args.config else [])
+        def imported(sid):
+            print(json.dumps({'event': 'audio_imported', 'session_id': sid,
+                              'resume_args': prefix + ['resume', sid]}), file=sys.stderr, flush=True)
+        result = process_audio(config, args.path, provision_seconds=args.provision_seconds,
+                               photos=args.photo, archive=args.archive, title=args.title,
+                               course=args.course, on_import=imported)
+        # Argument arrays avoid inventing shell quoting; retain explicit config.
+        if 'resume_args' in result:
+            result['resume_args'] = prefix + result['resume_args']
+        result['recovery_actions'] = [prefix + action for action in result['recovery_actions']]
+        print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
+        return 0 if result['ok'] else (130 if result['error']['code'] == 'interrupted' else 1)
     if args.command == 'import-photos':
         from .visuals import import_photos
         try:

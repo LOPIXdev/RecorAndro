@@ -1,5 +1,8 @@
 # RecorAndro
 
+For one-command import through verified packages, see
+[process-audio usage and recovery](docs/PROCESS_AUDIO.md).
+
 Android-first, local-only project. Step 1.1 provides Python configuration and
 environment diagnostics. Step 1.2 adds conservative storage preflight and verified
 immutable audio import. Step 2.1 adds managed-original ffprobe inspection.
