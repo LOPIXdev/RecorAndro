@@ -162,7 +162,8 @@ See [package/archive policy, storage check and controlled Redmi measurements](do
 The accepted lecture archive contained 18 members and 103,143,715 bytes. The
 Lecture archive default remains OPEN pending later real-device decisions.
 
-Step 5.1 is an optional photo-attachment candidate. Zero-photo sessions require
+Step 5.1 adds optional photo attachments. Zero-photo sessions require
 no migration or visual files. See [intake/index/archive semantics and Redmi
 validation](docs/VISUAL_ATTACHMENTS.md). Photo metadata is a timing hint only;
-audio part ZIPs remain unchanged. Independent review and Redmi FINAL PASS pending.
+audio part ZIPs remain unchanged. Step 5.1 received independent FINAL PASS; see
+the [dated Part 2 close-out and scope waiver](docs/STEP5_1_REVIEW.md#2026-11-20--step-52--part-2-acceptance-close-out).
