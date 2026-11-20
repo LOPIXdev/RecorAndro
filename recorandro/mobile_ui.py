@@ -233,13 +233,12 @@ class App:
         identifier(sid)
         with self.lock:
             self.idle()
-            self.current = dict(session_id=sid, parts=[], message='')
-            self.downloads.clear()
+            # A mistyped or temporarily busy lookup must preserve the open session.
             try:
                 status = session_status(self.config, sid)
             except (ValueError, OSError) as exc:
-                self.fail(exc)
-                return
+                raise Rejected(str(exc) or 'Cannot open that session.', 409) from exc
+            self.current = dict(session_id=sid, parts=[], message='')
             self.publish(status)
             if resume:
                 if status['recovery']['classification'] not in ('resumable', 'failed_retryable'):
@@ -247,6 +246,18 @@ class App:
                 self.busy = True
                 self.current.update(state='processing', message='Resuming verified pipeline.')
                 threading.Thread(target=self.run, daemon=True).start()
+
+    def refresh_download_status(self, sid):
+        """Withdraw links after a download detects evidence that changed."""
+        try:
+            status = session_status(self.config, sid)
+        except (ValueError, OSError) as exc:
+            self.downloads.clear()
+            self.current.update(parts=[], archive=None)
+            self.fail(exc)
+        else:
+            self.current['message'] = 'Package evidence changed. Review the current session status.'
+            self.publish(status)
 
 
 class Server(ThreadingHTTPServer):
@@ -362,11 +373,21 @@ class Handler(BaseHTTPRequestHandler):
 
     def download(self, token):
         app = self.server.app
-        with app.lock, ExitStack() as stack:
+        with app.lock:
             app.idle()
             if token not in app.downloads:
                 raise Rejected('Unknown or expired artifact.', 404)
             sid, aid, kind = app.downloads[token]
+            try:
+                self.verified_download(sid, aid, kind)
+            except (ValueError, OSError) as exc:
+                if getattr(exc, 'code', None) != 'inspection_busy':
+                    app.refresh_download_status(sid)
+                raise
+
+    def verified_download(self, sid, aid, kind):
+        with ExitStack() as stack:
+            app = self.server.app
             directory, record = _context(stack, app.config, sid, None)
             view = project_session(directory, record)
             entry = view['artifact_registry'].get(aid)
@@ -381,8 +402,8 @@ class Handler(BaseHTTPRequestHandler):
             self.headers_out('application/zip', entry['size_bytes'])
             name = leaf if re.fullmatch(r'(part_[0-9]+|full_archive)\.zip', leaf) else 'package.zip'
             self.send_header('Content-Disposition', 'attachment; filename="' + name + '"')
-            self.end_headers()
             try:
+                self.end_headers()
                 while block := stream.read(65536):
                     self.wfile.write(block)
             except OSError:

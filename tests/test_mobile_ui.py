@@ -232,6 +232,19 @@ class SecurityTests(HTTPFixture):
         self.assertEqual(state['optional_issues'], result['optional_issues'])
         self.assertEqual(len(state['parts']), 1)
 
+    def test_failed_lookup_preserves_verified_session_and_resume(self):
+        sid = 'a' * 32
+        status = dict(session_id=sid, current_state='imported', package_status={'status': 'not_generated'},
+                      last_successful_state='imported', recovery={'classification': 'resumable'},
+                      warnings=[], archive_status={'status': 'explicit_off'}, artifacts={})
+        headers = {'Content-Type': 'application/json'}
+        with patch('recorandro.mobile_ui.session_status', side_effect=[status, OSError('Session missing')]):
+            self.assertEqual(self.request('/open', 'POST', json.dumps({'session_id': sid}), headers)[0], 200)
+            self.assertEqual(self.request('/open', 'POST', json.dumps({'session_id': 'b' * 32}), headers)[0], 409)
+        current = json.loads(self.request()[2])
+        self.assertEqual(current['session_id'], sid)
+        self.assertEqual(current['recovery']['classification'], 'resumable')
+
     def test_stop_idle(self):
         self.assertEqual(self.request('/stop', 'POST', b'')[0], 200)
 
@@ -318,7 +331,10 @@ class ActualMediaTests(HTTPFixture):
         path = self.config.data_root / 'sessions' / state['session_id'] / archive_entry['relative_path']
         path.write_bytes(b'corrupt')
         self.assertEqual(self.request(state['archive']['download'])[0], 409)
-        self.assertEqual(self.request(state['parts'][0]['download'])[0], 200)
+        current = json.loads(self.request()[2])
+        self.assertEqual(current['state'], 'packaged')
+        self.assertIsNone(current['archive'])
+        self.assertEqual(self.request(current['parts'][0]['download'])[0], 200)
 
     def test_upload_process_download_corruption_resume(self):
         source = Path(self.temp.name) / 'short.wav'
@@ -347,6 +363,11 @@ class ActualMediaTests(HTTPFixture):
         self.assertEqual(blob, target.read_bytes())
         target.write_bytes(b'corrupted')
         self.assertEqual(self.request(url)[0], 409)  # Existence alone never permits delivery.
+        current = json.loads(self.request()[2])
+        self.assertEqual(current['session_id'], sid)
+        self.assertNotEqual(current['state'], 'packaged')
+        self.assertEqual(current['parts'], [])
+        self.assertEqual(current['recovery']['classification'], 'failed_retryable')
         body = json.dumps({'session_id': sid}).encode()
         self.assertEqual(self.request('/open', 'POST', body, {'Content-Type': 'application/json'})[0], 200)
         self.assertEqual(json.loads(self.request()[2])['parts'], [])

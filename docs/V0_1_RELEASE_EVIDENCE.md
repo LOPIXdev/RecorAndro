@@ -1,0 +1,83 @@
+# Step 7.1 — v0.1 release evidence
+
+**Decision `BLOCKED`.** Host verification passed. Release acceptance still
+requires the current Redmi smoke, Android Share, three device screenshots and
+a read-only comparison of the accepted lecture original with its historical
+hash. The audit environment had no usable Redmi connection or mounted lecture.
+
+## Scope and findings
+
+Audited `60e4a6fd4a6d284fd105c5fb693bdc8e2eef92ed..f24801c239e5cbf16a60c0914602ffda1ff0e1b3`
+from a clean `main`, plus the uncommitted fixes and release entry point in this
+review. The range covers the Step 5.2 evidence close-out, archive decision,
+one-command workflow and Termux browser UI. A scoped Git comparison found no
+changes to the original import, storage, media, recovery, visual intake,
+manifest or package implementations. Review traced the new callers through
+owned staging and preflight, immutable import, recovery, current registry
+verification and download under the existing session lock. See the
+[processing workflow](PROCESS_AUDIO.md) and [mobile launch guide](MOBILE_UI_PROTOTYPE.md).
+
+Fixed two adapter issues. A missing or inaccessible session lookup now keeps
+the current session ID and recovery controls. When a download discovers stale
+or damaged evidence, the adapter refreshes status and withdraws the rejected
+item from Ready. Invalid part evidence hides Ready and exposes the existing
+retry classification. Invalid optional archive evidence leaves verified part
+ZIPs available. Focused regressions exercise both cases.
+
+## Current host results
+
+- **24/24 focused tests passed** in 31.363 s with
+  `PYTHONPATH=tests python -m unittest test_mobile_ui test_workflow -v`. This
+  covered unsafe requests and paths, storage denial, incomplete uploads,
+  duplicate Start, immutable import, recovery, stale output rejection and
+  photo-inclusive archive order. The photo check was in scope because the new
+  entry points changed how optional photos reach the workflow before archiving.
+- One separate disposable end-to-end case ran through
+  `python -m recorandro.mobile_ui` in Windows Chrome at a mobile viewport. A
+  45-second synthetic WAV went through authenticated Select, Processing and
+  Ready, followed by an actual Chrome download and idle Stop. The file input
+  was supplied by Chrome automation. No Android picker or Share was exercised.
+- Session `2b36e4b6583549d0bfe5902524143cf2` reached `packaged` with one verified
+  part and archive `explicit_off`. Source and managed original were identical
+  at 1,440,078 bytes and SHA-256
+  `c3de1a833a6214ef71076f595ae796fd24e91a514ade1bccf6bf019a1923f8ed`.
+  The downloaded ZIP matched the managed ZIP at 287,332 bytes and SHA-256
+  `fc6981fb9a1c80d4e6941a78e42ac153e16600d0672d72ffea5d55f69533d579`.
+  CRC passed. It contained one audio part and the JSON and Markdown manifests.
+  Session ID, part number, audio hash and size, and source range 0–45 s matched.
+  Visual count was zero, status was `not_present`, and there were no visual
+  warnings or errors. The ordinary `storage_estimate_unverified` warning remained.
+- Python compilation, JavaScript syntax, document links and `git diff --check`
+  passed.
+
+## Historical results and remaining device gate
+
+Step 5.1 Redmi acceptance recorded **295/295** tests and **10/10** visual tests.
+The accepted 61.5-minute zero-photo lecture was packaged with three verified
+parts and a verified archive. A separate 20-second session accepted two real
+Xiaomi JPEGs and a photo-inclusive archive. The broader lecture plus 3–10 photos
+fixture and earlier manual listening were waived. The full suite and legacy
+matrices were skipped in this audit. Screen-off survival, hotspot coexistence,
+thermal behavior and long recording performance remain unverified for this UI.
+See the [accepted close-out](STEP5_1_REVIEW.md#2026-11-20--step-52--part-2-acceptance-close-out)
+and [lecture export evidence](SESSION_EXPORT.md#accepted-android-validation--step-24-final-pass).
+
+The audit used fresh disposable host roots and did not access or process the
+accepted lecture. Its historical managed original was 44,941,318 bytes with
+SHA-256 `9a3843145f2978defbf6a1afcb2b272abf77cbc520598573861b84682e5294ab`.
+Current on-device equality of that hash remains unverified. On Redmi, compare
+the hash of the managed original for session `d0c39956c17943299dd17e67bf6d1d68`
+with `sha256sum` using its existing `audio.managed_path` in `session.json`.
+Use a read-only comparison and leave the lecture in its existing data root.
+See the [historical hash and session reference](PACKAGE_AND_ARCHIVE.md).
+
+For the remaining release smoke, launch the reviewed UI in a fresh Termux data
+root using the [mobile launch guide](MOBILE_UI_PROTOTYPE.md#launch-on-redmi).
+Choose one disposable audio file with photos empty and archive OFF. Capture
+Select, Processing with actual work in progress, and Ready on the phone. Use
+a longer disposable clip if needed. Record the session ID, match source and
+managed hashes, confirm `packaged`, and compare ZIP CRC, bytes and manifest audio
+hash with the verified package. Download the ZIP in Chrome and complete Android
+Share to a local receiver. Confirm the receiver obtains the same ZIP. Keep the
+private launch URL out of the three screenshots. Record the evidence before
+changing the decision to `RC_READY`.
