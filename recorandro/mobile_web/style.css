@@ -1,1 +1,54 @@
-body{font:16px system-ui,sans-serif;background:#f5f5f2;color:#202927;margin:0}main{max-width:38rem;margin:auto;padding:1.25rem}section{background:white;border:1px solid #d6dcd8;border-radius:.5rem;padding:1rem;margin:1rem 0}h1,h2{margin:.2rem 0 .8rem}h2{font-size:1.1rem}label{display:block;margin:.75rem 0}input{display:block;box-sizing:border-box;max-width:100%;padding:.6rem;font:inherit}button,a{font:inherit;min-height:44px}button{padding:.5rem .8rem;margin:.25rem;border:1px solid #60746b;border-radius:.3rem;background:#edf4ee}button:disabled{opacity:.5}p{line-height:1.45;overflow-wrap:anywhere}li{margin:.8rem 0}a{display:block;color:#135b40}
+:root {
+  color-scheme: dark;
+  font: 16px/1.5 system-ui, sans-serif;
+  color: #edf3f2;
+  background: #111619;
+  --surface: #1a2226;
+  --border: #3b494e;
+  --muted: #b3c2c5;
+  --accent: #a1dec6;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+main { width: min(100%, 39rem); margin: auto; padding: 1rem clamp(1rem, 5vw, 2rem) 3rem; }
+.masthead { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: 1.5rem; }
+h1 { margin: 0; font-size: clamp(1.45rem, 6vw, 2rem); letter-spacing: -.035em; }
+h2 { margin: 0; font-size: 1.35rem; letter-spacing: -.02em; }
+p { margin: .55rem 0; overflow-wrap: anywhere; }
+section, details { border: 1px solid var(--border); border-radius: .8rem; background: var(--surface); padding: clamp(.9rem, 4vw, 1.4rem); }
+section + section, details { margin-top: .75rem; }
+fieldset { border: 0; padding: 0; margin: 1rem 0; min-width: 0; }
+label { display: block; font-weight: 600; margin-top: .9rem; }
+label span, .muted, .file-info, #budget-hint, #milestone, #archive-note, .download-meta, details p { color: var(--muted); }
+label span { font-size: .875rem; font-weight: 400; margin-left: .25rem; }
+input:not([type=checkbox]) {
+  display: block; width: 100%; min-height: 46px; margin-top: .3rem; padding: .55rem .65rem;
+  background: #131a1e; border: 1px solid var(--border); border-radius: .45rem; color: inherit; font: inherit;
+}
+input::file-selector-button { background: #28363b; color: inherit; font: inherit; border: 0; border-radius: .25rem; padding: .25rem .45rem; margin-right: .45rem; }
+input[type=checkbox] { width: 1.2rem; height: 1.2rem; accent-color: var(--accent); }
+.archive-choice { display: flex; align-items: center; min-height: 48px; gap: .5rem; }
+.archive-choice span { color: inherit; font-size: 1rem; font-weight: 600; }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+button, .download-link {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 46px;
+  padding: .55rem .85rem; border: 1px solid var(--border); border-radius: .45rem;
+  background: #263238; color: inherit; font: inherit; font-weight: 600; text-decoration: none; cursor: pointer;
+}
+button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+button:disabled { opacity: .55; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #152820; width: 100%; }
+button.quiet { background: transparent; font-size: .875rem; }
+.notice:empty, .file-info:empty, .details:empty { display: none; }
+.notice { color: #ffdaa4; margin-bottom: .75rem; }
+.activity { color: var(--accent); font-weight: 600; margin: .75rem 0; }
+.activity::before { content: ""; display: inline-block; width: .55em; height: .55em; margin-right: .45em; background: currentColor; border-radius: 50%; vertical-align: .08em; }
+.session { font-family: ui-monospace, monospace; }
+.details { white-space: pre-line; color: var(--muted); }
+.downloads { margin: 1rem 0; padding: 0; list-style: none; }
+.downloads li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .6rem; padding: .65rem 0; border-top: 1px solid var(--border); }
+.download-meta { display: block; font-size: .875rem; }
+summary { min-height: 44px; display: list-item; align-content: center; cursor: pointer; }
+@media (max-width: 340px) {
+  .fields { grid-template-columns: 1fr; gap: 0; }
+}

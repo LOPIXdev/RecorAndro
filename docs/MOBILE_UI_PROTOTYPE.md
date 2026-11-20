@@ -1,9 +1,9 @@
-# Step 6.3A — runnable audio-only browser feasibility prototype
+# Step 6.3 — RecorAndro on Android
 
-This implements the [selected loopback adapter](ANDROID_INTEGRATION_DECISION.md),
-using [Step 6.2 process_audio](PROCESS_AUDIO.md), existing status/recovery and
-package verifiers. It is not Android feasibility acceptance or stable UI release.
-No photos, recording/capture, native APK, launcher, framework or remote backend.
+RecorAndro runs in the phone's browser with a foreground Termux adapter. It uses
+the existing processing workflow, session recovery and package verifiers. Redmi
+acceptance is **NOT YET VERIFIED**. See the [integration decision](ANDROID_INTEGRATION_DECISION.md)
+and [processing workflow](PROCESS_AUDIO.md).
 
 ## Launch on Redmi
 
@@ -29,19 +29,19 @@ Treat this URL as private; exclude it from screenshots. Authentication removes
 the fragment from the address bar. Reopening the same URL/tab works during this
 launch; a server restart requires its new URL. The cookie is launch-specific.
 
-Select one existing on-device recording (not a new recording made by this UI).
-Set a conservative Lecture duration budget in seconds, 1..604800, then Start.
-The budget is not measured duration. Auto media modes and explicit Full Archive
-OFF come from process_audio; local profile ON does not override this workflow.
-No photo controls are exposed, and zero photos is complete.
+Choose one existing M4A, MP3, WAV or AAC recording. Choose photos if needed,
+and enter a title and course if useful. Set a conservative Lecture duration
+budget of 1 to 604800 seconds for storage provisioning. Select **Include a Full
+Archive** to opt in, then tap **Process**. The initial archive choice is OFF and
+the workflow uses Auto media settings. Zero photos is an ordinary selection.
 
-The three sections show selection, actual worker activity and verified package
-results. During import there is no session ID yet. The workflow callback exposes
-the real ID immediately after verified import, both on screen and in Termux.
-Keep this ID. During opaque resume the message says “Resuming verified pipeline”;
-there is no synthetic percentage, ETA or invented per-FFmpeg progress. Finished
-results show ZIP names/byte sizes and core milestone/warnings. They are a verified
-snapshot; every download independently rechecks current evidence.
+Select, Status and Ready are separate views. Termux prints the session ID as
+soon as import verifies, and the browser picks it up on its next status check.
+Keep this ID. Status shows actual adapter activity and the last verified stage
+available from the core. The browser displays part numbers, measured audio
+durations when available and ZIP sizes after the package frontier verifies.
+A Full Archive appears only when the current archive verifies. Every download
+checks current evidence again.
 
 Click a ZIP to download a local copy. Use Chrome Downloads → ⋮ → Share (or Open)
 and explicitly choose an available local receiver. Sharing is a two-step browser
@@ -57,7 +57,8 @@ only by owner choice. A download can require extra shared-storage free space.
 - A denied/unreadable provider, invalid budget, bad suffix, empty/oversized file,
   interrupted upload or staging storage denial is an error, not completion.
   The core still owns media admission and its separate storage preflight.
-- Closing the tab does not stop work. Reopen it to see the same in-memory job.
+- Refresh or reopen the same browser page to see the active job. The browser
+  issues no Start request on refresh. Processing can continue while the tab is closed.
   Open status with a known session ID after adapter restart; Resume is enabled
   only for core `resumable` / `failed_retryable` classifications. Manual-attention
   imports/originals are never silently repaired. Core locks still reject another
@@ -90,58 +91,68 @@ Cookies cannot be Secure on this HTTP-only listener; loopback is not isolation
 from other local apps. Credentials remain essential. Same-UID compromise is
 outside this boundary.
 
-Uploads use a raw File body, not content-URI/path interpretation or multipart
-buffering. Limit: 128 MiB/file, one active job, 64 accepted Start IDs per launch.
+Uploads send the selected browser Files as a raw Blob body. Bounded metadata in
+the request describes photo names and lengths so the adapter can stream one
+audio file and optional photos into separate owned files. The browser needs no
+Termux path and the adapter reads 64 KiB blocks. Limits are 128 MiB for audio,
+eight JPEG, PNG, HEIC or HEIF photos up to 16 MiB each, and 192 MiB total.
+The adapter accepts one active job and up to 64 distinct Start IDs per launch.
 Repeated Start with the same job ID never starts another import. New IDs mean
 new imports; deduplication is not global or persistent across launches. Filename
 validation rejects separators/control characters, unsafe suffixes and names over
 240 UTF-8 bytes. Exclusive private staging lives under
-`<data_root>/mobile-staging/<job-id>/<validated-name>`, streamed in 64 KiB blocks.
+`<data_root>/mobile-staging/<random-id>/<index>/<validated-name>`.
 Free space must cover upload plus 256 MiB and is rechecked while receiving; core
 preflight then accounts for storage already occupied by staging. This adds a
 temporary source copy; it is not a media-processing/hash implementation.
 
-Incomplete upload files are removed only from their newly owned staging folder.
-Completed staging files are **retained**, including after workflow failure, so
-there is no unsafe automatic cleanup. For disposable experiments the owner may
-remove the separately chosen experiment root only after stopping the adapter and
-confirming no needed sessions remain. Accepted data is never a cleanup target.
+The adapter removes its staging files after the worker exits or an upload fails.
+Empty staging directories can remain. Abrupt process death can leave staged
+copies on disk. For disposable experiments, stop the adapter and confirm no
+sessions are needed before removing the experiment root. If a browser cannot read
+a selected photo during transfer, remove it and retry the selection. After
+transfer, photo intake failures follow the existing nonblocking workflow.
 
-Download IDs resolve only to part-ZIP registry identities. Each request takes
+Download IDs resolve only to part ZIP and current Full Archive registry identities. Each request takes
 the existing core session lock, projects current evidence, requires verified
-`packaged`/package status, opens via owned no-follow paths, uses the existing
+`packaged`/package status and, for an archive, `archived`. It opens via owned no-follow paths, uses the existing
 size/SHA verifier and streams from that same handle while holding the lock.
 Corrupt/stale/missing evidence is refused even if a file exists. No UI hash,
 ZIP-writing, media or canonical-state algorithm is introduced. Authenticated
 status snapshots are in memory; opening a session calls the existing verifier.
 Worker polling does not acquire the processing session lock or rehash media.
 
-## Physical Redmi checklist — NOT run here
+## Redmi acceptance checklist — NOT YET VERIFIED
 
 1. Record Android/MIUI, browser/version, Termux source/version and ordinary UID.
    Launch the reviewed revision with the disposable root. Disconnect external
    networking; choose only local on-device files.
-2. Cancel the picker: no job/session. Select a short nonpersonal recording,
-   enter an invalid budget once, then a valid budget and Start. Observe real
-   activity, real session ID and verified Ready ZIP. Capture Select, Processing
-   and Ready screenshots without secret URL or personal filenames/media.
+2. Cancel the picker and confirm no import starts. Select a short nonpersonal
+   recording. Try an invalid budget, then a valid budget with photos empty and
+   archive OFF. Tap **Process**. Capture Select, Status during processing and
+   Ready screenshots. Keep the secret URL and personal filenames out of captures.
 3. Download and Open/Share one ZIP to an available local receiver. Compare its
    SHA-256/CRC with the managed ZIP; check its audio + two manifests and absence
    of photos. Record provider permission denial/unreadable selection if possible;
    it must not claim Ready. No receiving app: record unavailable, not PASS.
-4. In a second disposable attempt exercise upload cancellation or controlled
-   processing interruption. Keep the session ID when import completed. Restart
-   and reopen/resume that session, checking no duplicate import or false Ready.
-   Do not kill or corrupt the accepted lecture/session.
-5. Check Stop when idle, busy Stop refusal, browser close/reopen, and inability
+4. Start a second disposable session with local photos and Full Archive ON.
+   Confirm the part ZIP still has only audio and two manifests. Confirm the
+   verified Full Archive includes the selected originals and visual index.
+5. Refresh during processing and confirm the ID stays the same. In a disposable
+   attempt, interrupt after the ID is printed, restart Termux, open the new
+   private URL and check that ID. Use **Resume** when offered and verify the
+   same session reaches Ready. Use a longer disposable recording if the short
+   one finishes before you can interrupt it.
+6. Check Stop when idle, busy Stop refusal, browser close/reopen, and inability
    to connect through the phone's hotspot/LAN address. Long lecture, screen-off,
-   hotspot coexistence, battery/thermal behavior and photos remain deferred.
+   hotspot coexistence and battery/thermal behavior remain deferred.
 
 Host validation commands (from the repository root):
 
 ```sh
 PYTHONPATH=tests python -m unittest test_mobile_ui -v
 python -m compileall -q recorandro tests/test_mobile_ui.py
+node --check recorandro/mobile_web/app.js
 git diff --check
 ```
 

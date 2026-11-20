@@ -12,12 +12,14 @@ import threading
 import time
 import unittest
 from unittest.mock import patch
+from urllib.parse import quote
 import zipfile
 
 from recorandro.config import Config
 from recorandro.mobile_ui import Server, MAX_UPLOAD
 from recorandro.session_state import session_status
 from test_normalization import make_wav
+from test_visuals import png
 
 
 class HTTPFixture(unittest.TestCase):
@@ -65,6 +67,52 @@ class HTTPFixture(unittest.TestCase):
 
 
 class SecurityTests(HTTPFixture):
+    def test_batch_options_and_declared_boundaries(self):
+        def setup(data):
+            return {'X-Setup': quote(json.dumps(data))}
+        for data in ({'archive': 'automatic'}, {'photos': [{'name': '../x.png', 'size': 1}]},
+                     {'photos': [{'name': 'x.png', 'size': True}]},
+                     {'photos': [{'name': 'x.png', 'size': 4}]}):
+            self.assertIn(self.start(**setup(data))[0], (400, 413))
+        self.assertFalse(self.server.app.jobs)
+        with patch('recorandro.mobile_ui.process_audio') as process:
+            def use_paths(config, path, **options):
+                self.assertEqual(path.read_bytes(), b'RIFF')
+                self.assertEqual([p.read_bytes() for p in options['photos']], [b'a', b'b'])
+                self.assertEqual([p.name for p in options['photos']], ['x.png', 'x.png'])
+                self.assertEqual((options['title'], options['course'], options['archive']), ('Title', 'Course', 'on'))
+                return dict(session_id=None, optional_issues=[], error={'message': 'injected failure'})
+            process.side_effect = use_paths
+            data = {'archive': 'on', 'title': 'Title', 'course': 'Course',
+                    'photos': [{'name': 'x.png', 'size': 1}] * 2}
+            self.assertEqual(self.start(b'RIFFab', **setup(data))[0], 202)
+            self.assertEqual(self.wait_idle()['message'], 'injected failure')
+        self.assertFalse(list(self.config.data_root.rglob('x.png')))
+        self.assertFalse(list(self.config.data_root.rglob('short.wav')))
+
+    def test_lost_start_response_keeps_worker_reservation(self):
+        from recorandro.mobile_ui import Handler
+        entered, release = threading.Event(), threading.Event()
+        reply = Handler.reply
+        def lose_response(handler, value, code=200, cookie=False):
+            if code == 202:
+                raise BrokenPipeError()
+            return reply(handler, value, code, cookie)
+        def worker(*args, **kwargs):
+            entered.set()
+            release.wait(10)
+            return dict(session_id=None, optional_issues=[], error={'message': 'injected failure'})
+        with patch.object(Handler, 'reply', lose_response), \
+                patch('recorandro.mobile_ui.process_audio', side_effect=worker) as process:
+            try:
+                with self.assertRaises(http.client.RemoteDisconnected):
+                    self.start()
+                self.assertTrue(entered.wait(5))
+                self.assertEqual(self.start(**{'X-Job-ID': 'b' * 32})[0], 409)
+                process.assert_called_once()
+            finally:
+                release.set()
+                self.wait_idle()
     def test_binding_auth_cookie_and_response_headers(self):
         self.assertEqual(self.server.server_address[0], '127.0.0.1')
         self.assertEqual(self.request(auth=False)[0], 403)
@@ -168,6 +216,22 @@ class SecurityTests(HTTPFixture):
             status['recovery']['classification'] = 'failed_manual_attention'
             self.assertEqual(self.request('/resume', 'POST', body, {'Content-Type': 'application/json'})[0], 409)
 
+    def test_optional_photo_failure_keeps_verified_parts_ready(self):
+        sid = 'a' * 32
+        status = dict(session_id=sid, current_state='packaged', package_status={'status': 'verified'},
+                      last_successful_state='packaged', recovery={'classification': 'complete'},
+                      warnings=[], archive_status={'status': 'explicit_off'},
+                      artifacts={'part': dict(type='zip_package', status='verified',
+                                              relative_path='part_01.zip', size_bytes=1)})
+        result = dict(session_id=sid, optional_issues=[{'stage': 'photos', 'message': 'Photo intake failed'}])
+        with patch('recorandro.mobile_ui.process_audio', return_value=result), \
+                patch('recorandro.mobile_ui.session_status', return_value=status):
+            self.assertEqual(self.start()[0], 202)
+            state = self.wait_idle()
+        self.assertEqual(state['state'], 'packaged')
+        self.assertEqual(state['optional_issues'], result['optional_issues'])
+        self.assertEqual(len(state['parts']), 1)
+
     def test_stop_idle(self):
         self.assertEqual(self.request('/stop', 'POST', b'')[0], 200)
 
@@ -181,8 +245,9 @@ const assert = require('node:assert/strict');
 const nodes = {};
 global.document = {getElementById: id => nodes[id] ||= {
   files: [], value: '60', textContent: '', disabled: true,
-  replaceChildren() {}, append() {}}, createElement: () => ({append() {}})};
+  replaceChildren() {}, append() {}}, createElement: () => ({append() {}, setAttribute() {}})};
 global.location = {hash: ''}; global.history = {replaceState() {}};
+global.sessionStorage = {getItem() {return null;}, setItem() {}};
 global.setInterval = () => {};
 const calls = [];
 global.fetch = async (path, options) => {
@@ -204,6 +269,18 @@ global.fetch = async (path, options) => {
   assert.equal(calls.filter(x => x === '/start').length, 1);
   await poll();
   assert.match(el('notice').textContent, /Provider read denied/);
+  assert.equal(el('setup').hidden, false);
+  render({state: 'processing', busy: true, session_id: 'a'.repeat(32), milestone: 'imported'});
+  assert.equal(el('status').hidden, false);
+  assert.match(el('milestone').textContent, /Last verified: imported/);
+  assert.equal(el('ready').hidden, true);
+  render({state: 'packaged', parts: [{number: 1, size_bytes: 20, download: '/download/id'}]});
+  assert.equal(el('ready').hidden, false);
+  assert.equal(el('status').hidden, true);
+  connected = false;
+  render();
+  assert.equal(el('ready').hidden, true);
+  assert.equal(calls.filter(x => x === '/start').length, 1);
 })().catch(e => { console.error(e); process.exitCode = 1; });
 '''
         run = subprocess.run(['node', '-e', harness + script + checks], capture_output=True, text=True)
@@ -212,6 +289,37 @@ global.fetch = async (path, options) => {
 
 @unittest.skipUnless(shutil.which('ffmpeg') and shutil.which('ffprobe'), 'Real media tools required')
 class ActualMediaTests(HTTPFixture):
+    def test_photos_and_explicit_archive_are_verified(self):
+        source = Path(self.temp.name) / 'short.wav'
+        make_wav(source, seconds=1, amplitude=.1)
+        photo = png()
+        setup = quote(json.dumps({'archive': 'on', 'photos': [{'name': 'slide.png', 'size': len(photo)}],
+                                  'title': 'Disposable sample', 'course': 'Test'}))
+        self.assertEqual(self.start(source.read_bytes() + photo, **{'X-Setup': setup})[0], 202)
+        state = self.wait_idle()
+        self.assertEqual(state['state'], 'packaged', state)
+        self.assertEqual(state['visual_count'], 1)
+        self.assertEqual(state['archive_status'], 'archived')
+        self.assertEqual(state['parts'][0]['number'], 1)
+        self.assertGreater(state['parts'][0]['duration_seconds'], 0)
+        self.assertEqual(self.request(state['archive']['download'], auth=False)[0], 403)
+        archive_code, _, archive = self.request(state['archive']['download'])
+        self.assertEqual(archive_code, 200)
+        with zipfile.ZipFile(io.BytesIO(archive)) as full:
+            self.assertIsNone(full.testzip())
+            names = [n for n in full.namelist() if n.startswith('originals/photos/')]
+            self.assertEqual(len(names), 1)
+            self.assertEqual(full.read(names[0]), photo)
+        with zipfile.ZipFile(io.BytesIO(self.request(state['parts'][0]['download'])[2])) as part:
+            self.assertEqual(len(part.namelist()), 3)
+            self.assertFalse(any('photo' in name for name in part.namelist()))
+        status = session_status(self.config, state['session_id'])
+        archive_entry = next(e for e in status['artifacts'].values() if e['type'] == 'full_archive')
+        path = self.config.data_root / 'sessions' / state['session_id'] / archive_entry['relative_path']
+        path.write_bytes(b'corrupt')
+        self.assertEqual(self.request(state['archive']['download'])[0], 409)
+        self.assertEqual(self.request(state['parts'][0]['download'])[0], 200)
+
     def test_upload_process_download_corruption_resume(self):
         source = Path(self.temp.name) / 'short.wav'
         make_wav(source, seconds=1, amplitude=.1)
@@ -220,6 +328,8 @@ class ActualMediaTests(HTTPFixture):
         state = self.wait_idle()
         self.assertEqual(state['state'], 'packaged', state)
         self.assertEqual(len(state['parts']), 1)
+        self.assertEqual(state['archive_status'], 'explicit_off')
+        self.assertIsNone(state['archive'])
         sid = state['session_id']
         status = session_status(self.config, sid)
         self.assertEqual(status['audio']['sha256'], hashlib.sha256(original).hexdigest())
