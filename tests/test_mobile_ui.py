@@ -256,15 +256,19 @@ class BrowserControllerTests(unittest.TestCase):
         harness = r'''
 const assert = require('node:assert/strict');
 const nodes = {};
-global.document = {getElementById: id => nodes[id] ||= {
-  files: [], value: '60', textContent: '', disabled: true,
-  replaceChildren() {}, append() {}}, createElement: () => ({append() {}, setAttribute() {}})};
+const node = () => ({files: [], value: '60', textContent: '', disabled: true, dataset: {},
+  children: [], replaceChildren(...children) {this.children = children;},
+  append(...children) {this.children.push(...children);}, setAttribute() {}, focus() {},
+  click() {this.clicked = true;}});
+global.document = {getElementById: id => nodes[id] ||= node(), createElement: node};
 global.location = {hash: ''}; global.history = {replaceState() {}};
 global.sessionStorage = {getItem() {return null;}, setItem() {}};
 global.setInterval = () => {};
 const calls = [];
+const requests = [];
 global.fetch = async (path, options) => {
   calls.push(path);
+  requests.push(options);
   return {ok: path !== '/start', json: async () => path === '/start' ?
     {error: 'Provider read denied'} : {state: 'select', parts: [], csrf: 'token'}};
 };
@@ -272,28 +276,58 @@ global.fetch = async (path, options) => {
         checks = r'''
 (async () => {
   await new Promise(setImmediate);
+  el('choose-audio').onclick(); el('choose-photos').onclick();
+  assert.equal(el('audio').clicked, true);
+  assert.equal(el('photos').clicked, true);
   await el('start').onclick();
   assert.match(el('notice').textContent, /Select one/);
   assert.equal(calls.filter(x => x === '/start').length, 0);
   el('audio').files = [{name: 'sample.wav', size: 20}];
+  el('audio').onchange();
+  assert.equal(el('audio-name').textContent, 'sample.wav');
   el('budget').value = '0'; await el('start').onclick();
   assert.match(el('notice').textContent, /1..604800/);
   el('budget').value = '60'; await el('start').onclick();
   assert.equal(calls.filter(x => x === '/start').length, 1);
+  assert.equal(JSON.parse(decodeURIComponent(requests[calls.lastIndexOf('/start')].headers['X-Setup'])).archive, 'off');
   await poll();
   assert.match(el('notice').textContent, /Provider read denied/);
   assert.equal(el('setup').hidden, false);
   render({state: 'processing', busy: true, session_id: 'a'.repeat(32), milestone: 'imported'});
   assert.equal(el('status').hidden, false);
-  assert.match(el('milestone').textContent, /Last verified: imported/);
+  assert.equal(el('milestone').textContent, 'imported');
   assert.equal(el('ready').hidden, true);
-  render({state: 'packaged', parts: [{number: 1, size_bytes: 20, download: '/download/id'}]});
+  el('photos').files = [{name: 'image.jpg', size: 9}];
+  el('photos').onchange();
+  assert.match(el('photo-names').textContent, /image.jpg/);
+  el('archive').checked = true;
+  el('archive').onchange();
+  assert.match(el('settings-summary').textContent, /Archive on/);
+  render({state: 'select'});
+  await el('start').onclick();
+  const setup = JSON.parse(decodeURIComponent(requests[calls.lastIndexOf('/start')].headers['X-Setup']));
+  assert.equal(setup.archive, 'on');
+  assert.deepEqual(setup.photos, [{name: 'image.jpg', size: 9}]);
+  render({state: 'failed', recovery: {classification: 'failed_retryable', next_stage: 'package_generation'},
+          session_id: 'a'.repeat(32)});
+  assert.equal(el('resume').hidden, false);
+  assert.match(el('activity').textContent, /Retry available/);
+  await el('resume').onclick();
+  assert.equal(JSON.parse(requests[calls.lastIndexOf('/resume')].body).session_id, 'a'.repeat(32));
+  render({state: 'packaged', parts: [{number: 1, name: 'part_01.zip', size_bytes: 20,
+    duration_seconds: 5, range_seconds: [8, 13], download: '/download/part'}],
+    archive: {name: 'full_archive.zip', size_bytes: 30, download: '/download/archive'}});
   assert.equal(el('ready').hidden, false);
   assert.equal(el('status').hidden, true);
+  assert.equal(el('parts').children[0].children[0].children[2].textContent, 'Source 0:08–0:13');
+  assert.equal(el('parts').children[0].children[1].href, '/download/part');
+  assert.equal(el('archive-download').children[0].children[1].href, '/download/archive');
+  assert.equal(el('archive-output').hidden, false);
   connected = false;
   render();
   assert.equal(el('ready').hidden, true);
-  assert.equal(calls.filter(x => x === '/start').length, 1);
+  assert.equal(el('archive-output').hidden, true);
+  assert.equal(calls.filter(x => x === '/start').length, 2);
 })().catch(e => { console.error(e); process.exitCode = 1; });
 '''
         run = subprocess.run(['node', '-e', harness + script + checks], capture_output=True, text=True)
@@ -315,6 +349,7 @@ class ActualMediaTests(HTTPFixture):
         self.assertEqual(state['archive_status'], 'archived')
         self.assertEqual(state['parts'][0]['number'], 1)
         self.assertGreater(state['parts'][0]['duration_seconds'], 0)
+        self.assertEqual(state['parts'][0]['range_seconds'], [0, 1])
         self.assertEqual(self.request(state['archive']['download'], auth=False)[0], 403)
         archive_code, _, archive = self.request(state['archive']['download'])
         self.assertEqual(archive_code, 200)

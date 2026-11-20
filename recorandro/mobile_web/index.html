@@ -3,69 +3,125 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#111619">
-  <title>RecorAndro</title>
+  <meta name="theme-color" content="#eeebef">
+  <title>RecorAndro · Processing Deck</title>
   <link rel="stylesheet" href="/style.css">
   <script src="/app.js" defer></script>
 </head>
 <body>
-<main>
-  <header class="masthead">
-    <h1>RecorAndro</h1>
-    <button id="stop" class="quiet" type="button" disabled>Stop adapter</button>
-  </header>
-  <p id="notice" class="notice" role="alert"></p>
-  <section id="setup" aria-labelledby="setup-title">
-    <h2 id="setup-title">Select a recording</h2>
-    <p>Choose an audio file already on this phone.</p>
-    <fieldset id="selection">
-      <label for="audio">Recording <span>M4A, MP3, WAV or AAC</span></label>
-      <input id="audio" type="file" accept=".m4a,.mp3,.wav,.aac">
-      <p id="audio-name" class="file-info"></p>
-      <label for="photos">Photos <span>Optional</span></label>
-      <input id="photos" type="file" accept=".jpg,.jpeg,.png,.heic,.heif" multiple>
-      <p id="photo-names" class="file-info"></p>
-      <div class="fields">
-        <label>Title <span>Optional</span><input id="title" maxlength="120"></label>
-        <label>Course <span>Optional</span><input id="course" maxlength="120"></label>
+<main class="deck">
+  <header class="deck-header">
+    <div class="identity">
+      <span class="deck-mark" aria-hidden="true"></span>
+      <div><strong>RecorAndro</strong><span>Processing Deck</span></div>
+    </div>
+    <details id="reopen" class="session-menu">
+      <summary>Session</summary>
+      <div class="session-menu-body">
+        <form id="open-form">
+          <label for="sid">Open an existing run</label>
+          <input id="sid" placeholder="32-character session ID" maxlength="32" autocomplete="off" autocapitalize="none" spellcheck="false">
+          <button id="open" type="submit" disabled>Open run</button>
+        </form>
+        <button id="stop" class="text-action" type="button" disabled>Stop adapter</button>
       </div>
-      <label>Duration budget (seconds)<input id="budget" type="number" min="1" max="604800" value="7200" inputmode="numeric" aria-describedby="budget-hint"></label>
-      <p id="budget-hint">Allow enough time for the whole recording. This estimate is used for storage checks.</p>
-      <label class="archive-choice"><input id="archive" type="checkbox"><span>Include a Full Archive</span></label>
-      <p>Audio processing uses Auto. Part ZIPs contain audio and manifests.</p>
-    </fieldset>
-    <button id="start" class="primary" type="button" disabled>Process</button>
+    </details>
+  </header>
+
+  <p id="notice" class="notice" role="alert"></p>
+
+  <section id="setup" class="view" aria-labelledby="setup-title">
+    <header class="view-heading">
+      <h1 id="setup-title" tabindex="-1">New run</h1>
+      <p>Process a recording from this device.</p>
+    </header>
+    <div id="recording-card" class="recording-card">
+      <span class="recording-mark" aria-hidden="true"></span>
+      <div class="recording-meta">
+        <h2 id="audio-name">Input recording</h2>
+        <p id="audio-info">M4A, MP3, WAV or AAC · up to 128 MiB</p>
+      </div>
+      <input id="audio" type="file" accept=".m4a,.mp3,.wav,.aac" hidden>
+      <button id="choose-audio" class="picker-action" type="button" aria-describedby="audio-info">Choose audio</button>
+    </div>
+
+    <div class="attachment">
+      <div>
+        <h2>Photos <span>Optional</span></h2>
+        <p id="photo-names">Up to 8 attachments</p>
+      </div>
+      <input id="photos" type="file" accept=".jpg,.jpeg,.png,.heic,.heif" multiple hidden>
+      <div class="attachment-actions">
+        <button id="choose-photos" class="quiet-action" type="button">Attach</button>
+        <button id="clear-photos" class="text-action" type="button" hidden>Clear</button>
+      </div>
+    </div>
+
+    <details class="run-settings">
+      <summary>
+        <span>Run settings</span>
+        <span id="settings-summary" class="settings-summary">7200 s · Archive off</span>
+      </summary>
+      <div class="settings-body">
+        <label for="budget">Storage duration budget (seconds)</label>
+        <input id="budget" type="number" min="1" max="604800" value="7200" inputmode="numeric" aria-describedby="budget-hint">
+        <p id="budget-hint">Estimate the full recording duration for the storage check.</p>
+        <label class="archive-choice" for="archive">
+          <input id="archive" type="checkbox">
+          <span><strong>Include a Full Archive</strong><small>Originals and generated outputs in one ZIP.</small></span>
+        </label>
+        <div class="fields">
+          <label for="title">Title <span>Optional</span><input id="title" maxlength="120"></label>
+          <label for="course">Course <span>Optional</span><input id="course" maxlength="120"></label>
+        </div>
+      </div>
+    </details>
+    <button id="start" class="primary" type="button" disabled>Process recording <span aria-hidden="true">→</span></button>
   </section>
 
-  <section id="status" aria-labelledby="status-title" hidden>
-    <h2 id="status-title">Session status</h2>
-    <p id="activity" class="activity"></p>
-    <p id="milestone"></p>
+  <section id="status" class="view" aria-labelledby="status-title" hidden>
+    <header class="view-heading">
+      <h1 id="status-title" tabindex="-1">Processing</h1>
+    </header>
+    <div class="operation">
+      <div class="operation-state">
+        <span id="status-indicator" class="status-indicator" aria-hidden="true"></span>
+        <strong id="activity" role="status"></strong>
+      </div>
+      <p id="activity-detail"></p>
+      <dl class="operation-evidence">
+        <div><dt>Last verified</dt><dd id="milestone">—</dd></div>
+        <div id="next-step" hidden><dt>Next stage</dt><dd id="next-stage"></dd></div>
+      </dl>
+    </div>
     <button id="cancel" type="button" hidden disabled>Cancel upload</button>
   </section>
 
-  <section id="ready" aria-labelledby="ready-title" hidden>
-    <h2 id="ready-title">Ready to download</h2>
-    <p id="summary"></p>
-    <ul id="parts" class="downloads"></ul>
-    <p id="archive-note"></p>
-    <p>To share a ZIP, open Chrome Downloads, tap its menu and choose Share.</p>
+  <section id="ready" class="view" aria-labelledby="ready-title" hidden>
+    <header class="view-heading">
+      <h1 id="ready-title" tabindex="-1">Exports</h1>
+      <p id="summary" class="verified-summary"></p>
+    </header>
+    <ul id="parts" class="downloads" aria-label="Verified part ZIPs"></ul>
+    <section id="archive-output" class="archive-output" aria-labelledby="archive-title" hidden>
+      <h2 id="archive-title">Full archive</h2>
+      <ul id="archive-download" class="downloads"></ul>
+    </section>
+    <p id="archive-note" class="support-note"></p>
+    <aside class="share-note" aria-label="Android sharing">
+      <strong>Share on Android</strong>
+      <p>Download the ZIP, then open Chrome Downloads and choose Share from its menu.</p>
+    </aside>
   </section>
 
-  <section id="session-card" aria-label="Current session" hidden>
-    <span class="muted">Session ID</span>
-    <p id="session" class="session"></p>
+  <section id="session-card" class="run-reference" aria-label="Current session" hidden>
+    <dl><dt>Session ID</dt><dd id="session"></dd></dl>
     <p id="details" class="details"></p>
-    <button id="resume" type="button" hidden disabled>Resume</button>
-    <button id="new-session" type="button" hidden>New recording</button>
+    <div class="run-actions">
+      <button id="resume" class="primary" type="button" hidden disabled>Resume</button>
+      <button id="new-session" type="button" hidden>New run</button>
+    </div>
   </section>
-
-  <details id="reopen">
-    <summary>Open an existing session</summary>
-    <label>Session ID<input id="sid" maxlength="32" autocomplete="off" autocapitalize="none" spellcheck="false"></label>
-    <button id="open" type="button" disabled>Check session</button>
-    <p>Keep the ID to reopen after restarting Termux. Processing can continue while this tab is closed.</p>
-  </details>
 </main>
 </body>
 </html>

@@ -158,7 +158,8 @@ class App:
                     item = dict(name=name, size_bytes=entry['size_bytes'], download='/download/' + token)
                     if is_part:
                         number = int(part[1])
-                        parts.append(dict(item, number=number, duration_seconds=durations.get(number)))
+                        parts.append(dict(item, number=number, duration_seconds=durations.get(number),
+                                          range_seconds=status.get('part_ranges', {}).get(number)))
                     else:
                         archive = item
         recovery = status['recovery']

@@ -29,17 +29,17 @@ Treat this URL as private; exclude it from screenshots. Authentication removes
 the fragment from the address bar. Reopening the same URL/tab works during this
 launch; a server restart requires its new URL. The cookie is launch-specific.
 
-Choose one existing M4A, MP3, WAV or AAC recording. Choose photos if needed,
-and enter a title and course if useful. Set a conservative Lecture duration
-budget of 1 to 604800 seconds for storage provisioning. Select **Include a Full
-Archive** to opt in, then tap **Process**. The initial archive choice is OFF and
-the workflow uses Auto media settings. Zero photos is an ordinary selection.
+In **New run**, tap **Choose audio** and select one existing M4A, MP3, WAV or AAC
+recording. Use **Attach** if you want photos. Open **Run settings** to set a
+conservative duration budget of 1 to 604800 seconds for storage provisioning,
+enter optional title or course, or choose **Include a Full Archive**. Archive is
+off by default. Tap **Process recording** to start with Auto media settings.
 
-Select, Status and Ready are separate views. Termux prints the session ID as
+New run, Processing and Exports are separate views. Termux prints the session ID as
 soon as import verifies, and the browser picks it up on its next status check.
-Keep this ID. Status shows actual adapter activity and the last verified stage
-available from the core. The browser displays part numbers, measured audio
-durations when available and ZIP sizes after the package frontier verifies.
+Keep this ID. Processing shows actual adapter activity and the last verified stage
+available from the core. Exports shows each verified part ZIP with its size,
+measured audio duration and source range when available.
 A Full Archive appears only when the current archive verifies. Every download
 checks current evidence again.
 
@@ -59,8 +59,8 @@ only by owner choice. A download can require extra shared-storage free space.
   The core still owns media admission and its separate storage preflight.
 - Refresh or reopen the same browser page to see the active job. The browser
   issues no Start request on refresh. Processing can continue while the tab is closed.
-  Open status with a known session ID after adapter restart; Resume is enabled
-  only for core `resumable` / `failed_retryable` classifications. Manual-attention
+  After an adapter restart, use **Session → Open run** with a known session ID.
+  Resume is enabled only for core `resumable` / `failed_retryable` classifications. Manual-attention
   imports/originals are never silently repaired. Core locks still reject another
   caller working on the same session.
 - Stop adapter works only when idle. While busy, wait for completion. Termux
@@ -129,19 +129,20 @@ Worker polling does not acquire the processing session lock or rehash media.
    networking; choose only local on-device files.
 2. Cancel the picker and confirm no import starts. Select a short nonpersonal
    recording. Try an invalid budget, then a valid budget with photos empty and
-   archive OFF. Tap **Process**. Capture Select, Status during processing and
-   Ready screenshots. Keep the secret URL and personal filenames out of captures.
+   archive OFF. Tap **Process recording**. Capture New run, Processing and
+   Exports. Keep the secret URL and personal filenames out of captures.
 3. Download and Open/Share one ZIP to an available local receiver. Compare its
    SHA-256/CRC with the managed ZIP; check its audio + two manifests and absence
    of photos. Record provider permission denial/unreadable selection if possible;
-   it must not claim Ready. No receiving app: record unavailable, not PASS.
+   record whether processing stopped before any verified exports appeared.
+   If no receiving app is available, leave Android Share unverified.
 4. Start a second disposable session with local photos and Full Archive ON.
    Confirm the part ZIP still has only audio and two manifests. Confirm the
    verified Full Archive includes the selected originals and visual index.
 5. Refresh during processing and confirm the ID stays the same. In a disposable
    attempt, interrupt after the ID is printed, restart Termux, open the new
    private URL and check that ID. Use **Resume** when offered and verify the
-   same session reaches Ready. Use a longer disposable recording if the short
+   same session reaches Exports. Use a longer disposable recording if the short
    one finishes before you can interrupt it.
 6. Check Stop when idle, busy Stop refusal, browser close/reopen, and inability
    to connect through the phone's hotspot/LAN address. Long lecture, screen-off,

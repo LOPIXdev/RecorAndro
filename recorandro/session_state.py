@@ -105,7 +105,7 @@ def artifact_entry(artifact_id, kind, path, *, status="pending", source=None,
 
 
 def project_session(directory, record, *, _normalization_intent=False, _audio_only=False,
-                    _documents_only=False, _packages_only=False):
+                    _documents_only=False, _packages_only=False, _part_ranges=None):
     """Read evidence under the caller's existing session lock; never write files.
 
     Hashes verify referenced bytes, not paths or directory scans. No orphan is
@@ -324,6 +324,10 @@ def project_session(directory, record, *, _normalization_intent=False, _audio_on
                             registry[f"audio_part:{pointer['attempt_id']}:{part['part_index']}"]["plan_reference"] = reference
                         _require(saved.get("coverage") == coverage(parts, selected["media"]["duration_seconds"]),
                                  "Export coverage is incomplete")
+                        if _part_ranges is not None:
+                            _part_ranges.update((part["part_index"],
+                                                 [part["global_start_seconds"], part["global_end_seconds"]])
+                                                for part in parts)
                         part_count = len(parts)
                         frontier = "segments_exported"
                     active = None
@@ -428,13 +432,14 @@ def session_status(config, session_id):
     from .inspection import _existing_child, _inspection_lock
     _require(isinstance(session_id, str) and UUID.fullmatch(session_id), "Invalid session ID")
     _require(config.data_root.is_dir(), "Session data root unavailable")
+    part_ranges = {}
     with ExitStack() as stack:
         root = stack.enter_context(OwnedDirectory.root(config.data_root))
         sessions = _existing_child(stack, root, "sessions")
         directory = _existing_child(stack, sessions, session_id)
         stack.enter_context(_inspection_lock(directory))
         record = _read(directory)
-        view = project_session(directory, record)
+        view = project_session(directory, record, _part_ranges=part_ranges)
     warnings = list(record.get("warnings", [])) + view["progress_warnings"]
     for name in ("inspection", "normalization"):
         warnings.extend(_object(record.get(name)).get("warnings", []))
@@ -451,6 +456,7 @@ def session_status(config, session_id):
             "normalization": {k: _object(record.get("normalization")).get(k) for k in
                               ("status", "mode_requested", "decision", "gain_db", "output_source", "normalization_applied")},
             "segmentation": record.get("segmentation"), "part_count": view["verified_part_count"],
+            "part_ranges": part_ranges,
             "artifacts": view["artifact_registry"], "visual_count": record["visual_count"],
             "visual_status": view.get('visual_status', 'not_present'),
             "visual_errors": view.get('visual_errors', []),
