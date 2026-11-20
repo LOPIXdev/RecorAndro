@@ -2,8 +2,8 @@
 
 For one-command import through verified packages, see
 [process-audio usage and recovery](docs/PROCESS_AUDIO.md).
-For the Android browser UI, see
-[Termux launch and Redmi acceptance checks](docs/MOBILE_UI_PROTOTYPE.md).
+For the Android browser UI and current device scope, see
+[v0.1 technical freeze and quick start](docs/V0_1_FREEZE.md).
 
 Android-first, local-only project. Step 1.1 provides Python configuration and
 environment diagnostics. Step 1.2 adds conservative storage preflight and verified
@@ -164,8 +164,8 @@ python -m recorandro archive-session "$session_id" --decision on
 Resume reaches the required `packaged` frontier. Archive outcomes remain separate
 and nonblocking; unresolved Lecture defaults never trigger archive creation.
 See [package/archive policy, storage check and controlled Redmi measurements](docs/PACKAGE_AND_ARCHIVE.md).
-The accepted lecture archive contained 18 members and 103,143,715 bytes. The
-Lecture archive default remains OPEN pending later real-device decisions.
+The accepted lecture archive contained 18 members and 103,143,715 bytes.
+Full Archive defaults to OFF in the browser and `process-audio` workflows.
 
 Step 5.1 adds optional photo attachments. Zero-photo sessions require
 no migration or visual files. See [intake/index/archive semantics and Redmi

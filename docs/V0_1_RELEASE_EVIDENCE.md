@@ -1,9 +1,34 @@
 # Step 7.1 — v0.1 release evidence
 
-**Decision `BLOCKED`.** Host verification passed. Release acceptance still
-requires the current Redmi smoke, Android Share, three device screenshots and
-a read-only comparison of the accepted lecture original with its historical
-hash. The audit environment had no usable Redmi connection or mounted lecture.
+**Decision `RC_READY` under the owner-approved release-candidate scope.** The
+owner confirmed the Processing Deck run, Chrome ZIP download and Android Share
+on Redmi. The accepted lecture original passed its independent read-only
+integrity check. On 2026-11-21, the owner explicitly deferred the two remaining
+checks for RC1. Both remain unverified. See [deferred checks](#deferred-checks-for-rc1).
+
+The release close-out started on `main` at
+`6bd01b1d6929b833a3bd8764e409fde56044787d`, with the prior evidence update still
+uncommitted. That commit includes the Processing Deck redesign. The owner
+reported the redesigned UI on the phone without supplying its checkout SHA.
+
+## Current Redmi acceptance
+
+The owner observed these results on the physical Redmi Note 10 Pro in Chrome:
+
+- The Processing Deck opened and Android file selection and import worked.
+- A real M4A recording of about 61.5 minutes reached `packaged`. Exports showed
+  three verified part ZIPs. The Part 01 manifest showed the expected 25-minute
+  nominal segment and 5-second overlap.
+- Chrome downloaded a part ZIP and Android Share worked according to the owner.
+  Receiver-side ZIP hash equality remains unverified.
+- The owner supplied real Android screenshots for New run and completed Exports.
+  A clean capture while work is active remains unverified and is deferred for RC1.
+
+An independent read-only check of the previously accepted lecture's managed
+original passed. Session `d0c39956c17943299dd17e67bf6d1d68` matched the expected
+44,941,318 bytes and SHA-256
+`9a3843145f2978defbf6a1afcb2b272abf77cbc520598573861b84682e5294ab`.
+See the [historical hash and session reference](PACKAGE_AND_ARCHIVE.md).
 
 ## Scope and findings
 
@@ -24,7 +49,7 @@ item from Ready. Invalid part evidence hides Ready and exposes the existing
 retry classification. Invalid optional archive evidence leaves verified part
 ZIPs available. Focused regressions exercise both cases.
 
-## Current host results
+## Recorded Step 7.1 host results
 
 - **24/24 focused tests passed** in 31.363 s with
   `PYTHONPATH=tests python -m unittest test_mobile_ui test_workflow -v`. This
@@ -50,7 +75,7 @@ ZIPs available. Focused regressions exercise both cases.
 - Python compilation, JavaScript syntax, document links and `git diff --check`
   passed.
 
-## Historical results and remaining device gate
+## Historical results and scope
 
 Step 5.1 Redmi acceptance recorded **295/295** tests and **10/10** visual tests.
 The accepted 61.5-minute zero-photo lecture was packaged with three verified
@@ -62,22 +87,21 @@ thermal behavior and long recording performance remain unverified for this UI.
 See the [accepted close-out](STEP5_1_REVIEW.md#2026-11-20--step-52--part-2-acceptance-close-out)
 and [lecture export evidence](SESSION_EXPORT.md#accepted-android-validation--step-24-final-pass).
 
-The audit used fresh disposable host roots and did not access or process the
-accepted lecture. Its historical managed original was 44,941,318 bytes with
-SHA-256 `9a3843145f2978defbf6a1afcb2b272abf77cbc520598573861b84682e5294ab`.
-Current on-device equality of that hash remains unverified. On Redmi, compare
-the hash of the managed original for session `d0c39956c17943299dd17e67bf6d1d68`
-with `sha256sum` using its existing `audio.managed_path` in `session.json`.
-Use a read-only comparison and leave the lecture in its existing data root.
-See the [historical hash and session reference](PACKAGE_AND_ARCHIVE.md).
+## Deferred checks for RC1
 
-For the remaining release smoke, launch the reviewed UI in a fresh Termux data
-root using the [mobile launch guide](MOBILE_UI_PROTOTYPE.md#launch-on-redmi).
-Choose one disposable audio file with photos empty and archive OFF. Capture
-Select, Processing with actual work in progress, and Ready on the phone. Use
-a longer disposable clip if needed. Record the session ID, match source and
-managed hashes, confirm `packaged`, and compare ZIP CRC, bytes and manifest audio
-hash with the verified package. Download the ZIP in Chrome and complete Android
-Share to a local receiver. Confirm the receiver obtains the same ZIP. Keep the
-private launch URL out of the three screenshots. Record the evidence before
-changing the decision to `RC_READY`.
+| Check | Result | Remaining uncertainty |
+| --- | --- | --- |
+| Real Redmi screenshot during active Processing | **DEFERRED / NOT VERIFIED** | Device screenshots cover New run and completed Exports. |
+| Independent SHA-256 equality at the Android Share receiver | **DEFERRED / NOT VERIFIED** | The owner observed Share working. Byte equality at the receiver remains unverified. |
+
+The deferrals apply to RC1. See the [technical freeze and promotion conditions](V0_1_FREEZE.md).
+
+## Step 7.2 candidate checks
+
+On 2026-11-21, an isolated Windows wheel build and install verified package
+version `0.1.0`, imports, the console entry point and all three browser assets.
+CLI, `process-audio` and adapter help passed. The installed CLI processed a
+disposable two-second WAV to `packaged` with Full Archive OFF. Its one verified
+part ZIP was readable, passed CRC and contained the JSON and Markdown manifests.
+Release links and `git diff --check` passed. The historical suites were reused
+as recorded evidence.

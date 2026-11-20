@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "recorandro"
 version = "0.1.0"
-description = "Local Android/Termux foundation and environment diagnostics"
+description = "Local audio processing, verified ZIP exports, and a Termux browser interface"
 requires-python = ">=3.10"
 dependencies = []
 
