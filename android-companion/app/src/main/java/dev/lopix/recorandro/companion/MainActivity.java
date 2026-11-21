@@ -2,6 +2,9 @@ package dev.lopix.recorandro.companion;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -13,6 +16,8 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.CookieManager;
 import android.webkit.RenderProcessGoneDetail;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -24,6 +29,11 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
+import android.window.OnBackInvokedDispatcher;
+
+import org.json.JSONArray;
+import org.json.JSONException;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -32,34 +42,49 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class MainActivity extends Activity {
+    private static final String LAST_SESSION = "last-session-id";
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final Pairing pairing = new Pairing();
+    private final Runnable heartbeat = this::monitor;
+    private final Runnable rendererUnresponsive = () -> close(R.string.connection_lost);
     private LinearLayout layout;
+    private LinearLayout connectionForm;
     private EditText codeField;
     private Button connect;
     private Button disconnect;
     private TextView status;
+    private DeckFileChooser chooser;
     private WebView deck;
+    private int deckAttempt;
     private String pendingCode;
+    private String lastSessionId;
+    private boolean foreground;
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         protectWindow();
+        lastSessionId = state == null ? null : state.getString(LAST_SESSION);
+        chooser = new DeckFileChooser(this);
         layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
-        int margin = Math.round(16 * getResources().getDisplayMetrics().density);
-        layout.setPadding(margin, margin, margin, margin);
         layout.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
         layout.setSaveFromParentEnabled(false);
         setContentView(layout);
 
-        TextView title = addLabel(R.string.app_name);
+        int margin = Math.round(16 * getResources().getDisplayMetrics().density);
+        connectionForm = new LinearLayout(this);
+        connectionForm.setOrientation(LinearLayout.VERTICAL);
+        connectionForm.setPadding(margin, margin, margin, 0);
+        layout.addView(connectionForm);
+        TextView title = new TextView(this);
+        title.setText(R.string.app_name);
         title.setTextSize(23);
-        addLabel(R.string.instructions);
-        status = addLabel(R.string.idle);
-        status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        connectionForm.addView(title);
+        TextView instructions = new TextView(this);
+        instructions.setText(R.string.instructions);
+        connectionForm.addView(instructions);
 
         codeField = new EditText(this) {
             @Override
@@ -80,27 +105,29 @@ public final class MainActivity extends Activity {
         codeField.setLongClickable(false);
         codeField.setTextIsSelectable(false);
         codeField.setSaveEnabled(false);
-        layout.addView(codeField);
+        connectionForm.addView(codeField);
 
         LinearLayout actions = new LinearLayout(this);
+        actions.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        actions.setPadding(margin, 0, margin, 0);
         layout.addView(actions);
+        status = new TextView(this);
+        status.setText(R.string.idle);
+        status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        actions.addView(status, new LinearLayout.LayoutParams(0, -2, 1));
         connect = new Button(this);
         connect.setText(R.string.connect);
         connect.setOnClickListener(view -> connect());
         actions.addView(connect);
         disconnect = new Button(this);
         disconnect.setText(R.string.disconnect);
-        disconnect.setEnabled(false);
+        disconnect.setVisibility(View.GONE);
         disconnect.setOnClickListener(view -> close(R.string.idle));
         actions.addView(disconnect);
-        addLabel(R.string.scope);
-    }
-
-    private TextView addLabel(int label) {
-        TextView text = new TextView(this);
-        text.setText(label);
-        layout.addView(text);
-        return text;
+        if (Build.VERSION.SDK_INT >= 33) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                    OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::goBack);
+        }
     }
 
     private void protectWindow() {
@@ -123,8 +150,8 @@ public final class MainActivity extends Activity {
         codeField.getText().clear();
         codeField.setEnabled(false);
         getSystemService(InputMethodManager.class).hideSoftInputFromWindow(codeField.getWindowToken(), 0);
-        connect.setEnabled(false);
-        disconnect.setEnabled(true);
+        connect.setVisibility(View.GONE);
+        disconnect.setVisibility(View.VISIBLE);
         status.setText(R.string.connecting);
         handler.postDelayed(() -> {
             if (pairing.isCurrent(attempt) && !pairing.isAuthenticated()) {
@@ -163,6 +190,7 @@ public final class MainActivity extends Activity {
     private void showDeck(int attempt, Map<String, byte[]> assets) {
         try {
             deck = new WebView(this);
+            deckAttempt = attempt;
             WebSettings settings = deck.getSettings();
             settings.setJavaScriptEnabled(true); // Only the reviewed Deck bytes are executed.
             settings.setDomStorageEnabled(true);
@@ -175,6 +203,18 @@ public final class MainActivity extends Activity {
             deck.setSaveEnabled(false);
             deck.setVisibility(View.INVISIBLE);
             deck.setWebViewClient(new DeckViewClient(attempt, assets));
+            deck.setWebChromeClient(new WebChromeClient() {
+                @Override
+                public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback,
+                                                 FileChooserParams params) {
+                    if (view != deck || !foreground || !pairing.isAuthenticated()
+                            || !DeckEndpoint.ROOT.equals(view.getUrl())) {
+                        callback.onReceiveValue(null);
+                        return true;
+                    }
+                    return chooser.open(callback, params);
+                }
+            });
             layout.addView(deck, new LinearLayout.LayoutParams(-1, 0, 1));
             deck.loadUrl(DeckEndpoint.ROOT);
         } catch (RuntimeException exception) {
@@ -182,24 +222,46 @@ public final class MainActivity extends Activity {
         }
     }
 
-    private void monitor(int attempt, WebView view) {
-        if (!pairing.isCurrent(attempt)) {
+    private void monitor() {
+        WebView view = deck;
+        if (view == null || !foreground) {
             return;
         }
+        handler.removeCallbacks(rendererUnresponsive);
+        handler.postDelayed(rendererUnresponsive, 9000);
         view.evaluateJavascript(DeckEndpoint.STATUS_SCRIPT, value -> {
-            if (!pairing.isCurrent(attempt)) {
+            if (view != deck || !foreground) {
                 return;
             }
-            switch (value == null ? "" : value) {
-                case "\"rejected\"" -> close(R.string.rejected);
-                case "\"failed\"" -> close(R.string.failed);
-                case "\"connected\"" -> {
+            handler.removeCallbacks(rendererUnresponsive);
+            showConnectionState(value);
+            if (view == deck) {
+                handler.postDelayed(heartbeat, 500);
+            }
+        });
+    }
+
+    private void showConnectionState(String value) {
+        try {
+            JSONArray response = new JSONArray(value == null ? "[]" : value);
+            String sessionId = response.optString(1);
+            if (DeckEndpoint.validSessionId(sessionId)) {
+                lastSessionId = sessionId;
+            }
+            switch (response.optString(0)) {
+                case "rejected" -> close(R.string.rejected);
+                case "failed" -> close(R.string.failed);
+                case "stopped" -> close(R.string.stopped);
+                case "lost" -> close(R.string.connection_lost);
+                case "checking" -> setStatus(R.string.checking);
+                case "connected" -> {
                     if (!pairing.isAuthenticated()) {
-                        pairing.authenticate(attempt);
-                        status.setText(R.string.authenticated);
+                        pairing.authenticate(deckAttempt);
+                        connectionForm.setVisibility(View.GONE);
                         deck.setVisibility(View.VISIBLE);
                         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
                     }
+                    setStatus(R.string.ready);
                 }
                 default -> {
                     if (pairing.isAuthenticated()) {
@@ -207,10 +269,15 @@ public final class MainActivity extends Activity {
                     }
                 }
             }
-            if (pairing.isCurrent(attempt)) {
-                handler.postDelayed(() -> monitor(attempt, view), 500);
-            }
-        });
+        } catch (JSONException exception) {
+            close(R.string.failed);
+        }
+    }
+
+    private void setStatus(int message) {
+        if (!getText(message).equals(status.getText())) {
+            status.setText(message);
+        }
     }
 
     private void failIfCurrent(int attempt, int message) {
@@ -224,10 +291,12 @@ public final class MainActivity extends Activity {
         pairing.close();
         handler.removeCallbacksAndMessages(null);
         pendingCode = null;
+        chooser.cancel();
+        connectionForm.setVisibility(View.VISIBLE);
         codeField.getText().clear();
         codeField.setEnabled(true);
-        connect.setEnabled(true);
-        disconnect.setEnabled(false);
+        connect.setVisibility(View.VISIBLE);
+        disconnect.setVisibility(View.GONE);
         status.setText(message);
         if (deck != null) {
             layout.removeView(deck);
@@ -244,14 +313,62 @@ public final class MainActivity extends Activity {
         }
     }
 
+    private void goBack() {
+        if (disconnect.getVisibility() == View.VISIBLE) {
+            close(R.string.idle);
+        } else {
+            finish();
+        }
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public void onBackPressed() {
+        goBack();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        foreground = true;
+        if (deck != null && pairing.isAuthenticated()) {
+            setStatus(R.string.checking);
+            deck.evaluateJavascript(DeckEndpoint.RECHECK_SCRIPT, null);
+            handler.post(heartbeat);
+        }
+    }
+
     @Override
     protected void onStop() {
-        close(R.string.idle);
+        foreground = false;
+        if (chooser.isOpen()) {
+            handler.removeCallbacks(heartbeat);
+            handler.removeCallbacks(rendererUnresponsive);
+        } else {
+            close(R.string.idle);
+        }
         super.onStop();
     }
 
     @Override
+    protected void onActivityResult(int request, int result, Intent data) {
+        super.onActivityResult(request, result, data);
+        chooser.onResult(request, result, data);
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle state) {
+        super.onSaveInstanceState(state);
+        if (DeckEndpoint.validSessionId(lastSessionId)) {
+            state.putString(LAST_SESSION, lastSessionId);
+        }
+    }
+
+    @Override
     protected void onDestroy() {
+        if (deck != null) {
+            close(R.string.idle);
+        }
         worker.shutdownNow();
         super.onDestroy();
     }
@@ -267,7 +384,11 @@ public final class MainActivity extends Activity {
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-            return true; // A2 performs just the initial, app-directed navigation.
+            if (request.hasGesture() && "GET".equals(request.getMethod())
+                    && DeckEndpoint.isExport(request.getUrl().toString())) {
+                Toast.makeText(MainActivity.this, R.string.export_deferred, Toast.LENGTH_LONG).show();
+            }
+            return true; // The only page navigation is the initial app-directed load.
         }
 
         @Override
@@ -285,7 +406,7 @@ public final class MainActivity extends Activity {
                                 "X-Content-Type-Options", "nosniff"),
                         new ByteArrayInputStream(assets.get(path)));
             }
-            return null; // /auth and /state use Chromium's same-origin HTTP and cookie behavior.
+            return null; // Termux handles every action with the existing browser cookie and CSRF.
         }
 
         @Override
@@ -297,9 +418,10 @@ public final class MainActivity extends Activity {
                 close(R.string.wrong_server);
                 return;
             }
-            String script = DeckEndpoint.authenticationScript(pendingCode);
+            String script = DeckEndpoint.authenticationScript(pendingCode, lastSessionId);
             pendingCode = null;
-            view.evaluateJavascript(script, value -> monitor(attempt, view));
+            view.evaluateJavascript(script, null);
+            handler.post(heartbeat);
         }
 
         @Override
@@ -312,6 +434,7 @@ public final class MainActivity extends Activity {
         @Override
         public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
             if (view == deck) {
+                chooser.cancel();
                 layout.removeView(view);
                 view.destroy();
                 deck = null;

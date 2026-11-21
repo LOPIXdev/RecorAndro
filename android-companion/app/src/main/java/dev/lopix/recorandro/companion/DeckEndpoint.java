@@ -12,18 +12,23 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 final class DeckEndpoint {
     static final String ORIGIN = "http://127.0.0.1:8765";
     static final String ROOT = ORIGIN + "/";
-    static final String STATUS_SCRIPT = "typeof recorandroA2Status === 'function'"
-            + " ? recorandroA2Status() : 'pending'";
+    static final String STATUS_SCRIPT = "typeof recorandroStatus === 'function'"
+            + " ? recorandroStatus() : ['pending', '']";
+    static final String RECHECK_SCRIPT = "typeof recorandroRecheck === 'function' && recorandroRecheck()";
     static final String CSP = "default-src 'self'; frame-ancestors 'none'; object-src 'none';"
             + " base-uri 'none'; form-action 'self'";
     private static final String HOST = "127.0.0.1:8765";
     private static final int MAX_ASSET_BYTES = 64 * 1024;
     private static final Pattern CODE = Pattern.compile("[a-zA-Z0-9_-]{43}");
+    private static final Pattern SESSION = Pattern.compile("[0-9a-f]{32}");
+    private static final Pattern EXPORT = Pattern.compile("/download/[0-9a-f]{32}");
+    private static final Set<String> ACTIONS = Set.of("/auth", "/start", "/open", "/resume", "/stop");
 
     // Exact assets from the v0.1 freeze. Only reviewed same-origin code sees the launch code.
     static final Map<String, Asset> ASSETS = Map.of(
@@ -37,7 +42,11 @@ final class DeckEndpoint {
         return CODE.matcher(input).matches();
     }
 
-    static String allowedPath(String url, String method, boolean mainFrame) {
+    static boolean validSessionId(String input) {
+        return input != null && SESSION.matcher(input).matches();
+    }
+
+    private static String localPath(String url) {
         URI uri;
         try {
             uri = URI.create(url);
@@ -48,14 +57,26 @@ final class DeckEndpoint {
                 || uri.getRawQuery() != null || uri.getRawFragment() != null) {
             return null;
         }
-        String path = uri.getRawPath();
+        return uri.getRawPath();
+    }
+
+    static boolean isExport(String url) {
+        String path = localPath(url);
+        return path != null && EXPORT.matcher(path).matches();
+    }
+
+    static String allowedPath(String url, String method, boolean mainFrame) {
+        String path = localPath(url);
+        if (path == null) {
+            return null;
+        }
         if (mainFrame) {
             return "GET".equals(method) && "/".equals(path) ? path : null;
         }
         if ("GET".equals(method) && (ASSETS.containsKey(path) || "/state".equals(path))) {
             return path;
         }
-        return "POST".equals(method) && "/auth".equals(path) ? path : null;
+        return "POST".equals(method) && ACTIONS.contains(path) ? path : null;
     }
 
     static Map<String, byte[]> readDeck() throws IOException {
@@ -116,7 +137,7 @@ final class DeckEndpoint {
         }
     }
 
-    static String authenticationScript(String code) {
+    static String authenticationScript(String code, String sessionId) {
         if (!validCode(code)) {
             throw new IllegalArgumentException("Invalid launch code format");
         }
@@ -124,33 +145,85 @@ final class DeckEndpoint {
         return String.format(Locale.ROOT, """
                 (() => {
                   if (location.href !== '%s') return;
-                  document.querySelector('main').inert = true;
-                  let report = () => 'pending';
-                  window.recorandroA2Status = () => report();
+                  const deck = document.querySelector('main');
+                  deck.inert = true;
+                  const fetchLocal = window.fetch.bind(window);
+                  window.fetch = (input, options) => fetchLocal(input, {...options, redirect: 'error'});
+                  let report = () => ['pending', ''];
+                  window.recorandroStatus = () => report();
                   fetch('/auth', {method: 'POST', body: '', redirect: 'error',
                     headers: {'X-Launch-Token': '%s'}}).then(async (response) => {
-                      if (response.status === 403) { report = () => 'rejected'; return; }
-                      if (!response.ok) { report = () => 'failed'; return; }
+                      if (response.status === 403) { report = () => ['rejected', '']; return; }
+                      if (!response.ok) { report = () => ['failed', '']; return; }
                       const snapshot = await response.json();
                       if (!/^[a-zA-Z0-9_-]{43}$/.test(snapshot.csrf) ||
                           typeof snapshot.busy !== 'boolean' || typeof snapshot.state !== 'string') {
-                        report = () => 'failed';
+                        report = () => ['failed', ''];
                         return;
                       }
-                      // Stock app.js replaces current after each successful protected /state read.
-                      let lastState, lastResponse = 0;
-                      report = () => {
-                        if (typeof connected === 'undefined' || !connected || csrf !== snapshot.csrf) return 'accepted';
-                        if (lastState !== current) {
-                          if (lastState === undefined) document.getElementById('notice').textContent = '';
-                          lastState = current;
-                          lastResponse = performance.now();
-                        }
-                        return performance.now() - lastResponse < 8000 ? 'connected' : 'accepted';
+                      let lastState, lastResponse = 0, lastProbe = 0;
+                      let checking = false, rechecking = false, expired = false;
+                      const markLive = () => {
+                        lastResponse = performance.now();
+                        rechecking = false;
+                        deck.inert = false;
                       };
-                  }).catch(() => { report = () => 'failed'; });
+                      const probe = async () => {
+                        if (checking) return;
+                        checking = true;
+                        lastProbe = performance.now();
+                        const timeout = new AbortController();
+                        const timer = setTimeout(() => timeout.abort(), 2500);
+                        try {
+                          const response = await fetch('/state', {signal: timeout.signal});
+                          if (response.status === 403) expired = true;
+                          if (response.ok) {
+                            const state = await response.json();
+                            if (state.csrf === snapshot.csrf) markLive();
+                            else expired = true;
+                          }
+                        } catch (_) {
+                          // The last verified response sets the deadline.
+                        } finally {
+                          clearTimeout(timer);
+                          checking = false;
+                        }
+                      };
+                      window.recorandroRecheck = () => {
+                        if (!lastState) return;
+                        deck.inert = true;
+                        lastState = current;
+                        rechecking = true;
+                        lastResponse = performance.now();
+                        probe();
+                      };
+                      report = () => {
+                        const id = typeof current !== 'undefined' && /^[0-9a-f]{32}$/.test(current.session_id)
+                          ? current.session_id : '';
+                        if (typeof stopped !== 'undefined' && stopped) return ['stopped', id];
+                        if (expired) return ['lost', id];
+                        if (typeof connected !== 'undefined' && connected && csrf === snapshot.csrf && lastState !== current) {
+                          if (!lastState) {
+                            document.getElementById('notice').textContent = '';
+                            const savedId = '%s';
+                            if (!id && savedId) {
+                              document.getElementById('sid').value = savedId;
+                              document.getElementById('reopen').open = true;
+                            }
+                          }
+                          lastState = current;
+                          markLive();
+                        }
+                        if (!lastState) return ['accepted', id];
+                        const now = performance.now();
+                        if (now - lastResponse >= 8000) return ['lost', id];
+                        // The stock controller pauses its poll during an explicit session action.
+                        if (now - lastResponse >= 3000 && now - lastProbe >= 3000) probe();
+                        return [rechecking ? 'checking' : 'connected', id];
+                      };
+                  }).catch(() => { report = () => ['failed', '']; });
                 })()
-                """, ROOT, code);
+                """, ROOT, code, validSessionId(sessionId) ? sessionId : "");
     }
 
     static final class Asset {

@@ -1,9 +1,14 @@
 # RecorAndro A2 Redmi device gate
 
-**Physical Redmi status · NOT TESTED.** This checklist qualifies manual Termux
-startup and authenticated, read-only viewing in the companion. File picker,
-download and Share in the APK are **NOT IMPLEMENTED** for this narrowed A2.
-Use the existing standalone Chrome flow for those actions.
+**Physical Redmi status · PASS for the owner-approved A2-to-A3 gate.** The
+owner reported a successful test on a Xiaomi Redmi Note 10 Pro. Screenshots
+supplied to the project reviewer showed RecorAndro Companion `0.2.0-a2`
+installed, the existing Termux adapter running on port `8765`, successful
+manual pairing, the message **Connected. The protected Processing Deck
+responded.**, and the existing Deck rendered in the companion WebView.
+The owner accepted these observations as sufficient to begin A3. Acceptance
+of the full original checklist remains pending. File picker, download and
+Share are **NOT IMPLEMENTED** in A2. Use standalone Chrome for those actions.
 [Architecture decision](ANDROID_COMPANION_ARCHITECTURE.md) ·
 [Termux/browser fallback](V0_1_FREEZE.md#quick-start-on-android)
 
@@ -40,7 +45,8 @@ codes, valid pairing, HttpOnly cookie use, wrong Host and Origin, missing CSRF,
 and loss of connection after STOP. Android lint reported zero errors and three
 warnings for the pinned target SDK, pinned Gradle plugin and omitted custom
 icon. The SDK metadata version warning did not block the build. The host
-checks leave Android WebView and the complete Redmi procedure unverified.
+checks establish host behavior. The owner-reported observations above provide
+the limited physical-device acceptance.
 
 ## 1. Identify the Redmi and Termux
 
@@ -56,7 +62,7 @@ signer. If ADB is already authorized and the signing certificate is needed,
 use `adb shell pm path com.termux`, pull the reported `base.apk` to a private
 host directory, and use `apksigner verify --print-certs` on it. Compare its
 SHA-256 certificate fingerprint with the trusted F-Droid package for the same
-app source. Record unavailable signer evidence as **NOT TESTED**. Keep the
+app source. Record unavailable signer evidence as **NOT VERIFIED**. Keep the
 existing Termux installation and its data. [Termux environment](TERMUX_ENVIRONMENT.md) ·
 [Termux distribution and signing](https://github.com/termux/termux-app#installation)
 
@@ -152,17 +158,17 @@ export RECORANDRO_DATA_ROOT="$(mktemp -d "$HOME/recorandro-a2.XXXXXXXX")"
 2. To observe live connection loss, use split-screen if supported and stop the
    idle disposable adapter with Ctrl+C while the preview remains visible.
    Expect **Connection lost** and the preview to close. If switching windows
-   already disconnects the companion, record the live-loss check as **NOT TESTED**.
+   already disconnects the companion, record the live-loss check as **NOT VERIFIED**.
 3. Start the adapter again on `8765` in the same disposable terminal. Type the
    previous launch code manually. Expect rejection, then success with the new
    code. If retaining the previous code is impractical without copying it,
-   record stale-code validation as **NOT TESTED** on the Redmi.
+   record stale-code validation as **NOT VERIFIED** on the Redmi.
 4. For final STOP, disconnect in the companion and stop only the disposable
    idle adapter with Ctrl+C. A dummy code should now show the no-response message.
 
 ## 6. Record evidence
 
-Use **PASS**, **FAIL** or **NOT TESTED** for each row and record the model,
+Use **PASS**, **FAIL** or **NOT VERIFIED** for each row and record the model,
 versions, checkout SHA, APK SHA-256 and concise observations. A screenshot of
 the connected preview may be captured after pairing. The pairing screen should
 be protected from normal screenshots and the recents preview. Test capture
@@ -173,14 +179,15 @@ standalone Chrome for the disposable test setup.
 
 | Check | Redmi result | Observation |
 | --- | --- | --- |
-| Device, Termux source, signer and toolchain | NOT TESTED | |
-| Exact APK and owner installation or decline | NOT TESTED | |
-| Absent/misconfigured adapter and wrong port | NOT TESTED | |
-| Bad input and wrong code rejected | NOT TESTED | |
-| Valid code reaches authenticated Deck, repeated Connect | NOT TESTED | |
-| Pairing screenshot/recents and redaction | NOT TESTED | |
-| Disconnect, reopen, stopped adapter and restart with stale code | NOT TESTED | |
-| Final STOP and owner uninstall | NOT TESTED | |
+| Redmi Note 10 Pro and app version | PASS | Owner-reported device and installed version `0.2.0-a2`. |
+| Physical APK installation | PASS | Owner confirmed installation. On-device APK hash and signer comparison remain unverified. |
+| Termux launch on `8765`, manual pairing and authenticated Deck rendering | PASS | Owner-reported screenshots showed the adapter, Connected message and Deck in the WebView. |
+| Full device inventory, including OS/MIUI, WebView, Termux source/signer and APK hash | NOT VERIFIED | A5 device acceptance. |
+| Absent/misconfigured adapter, wrong port and repeated Connect | NOT VERIFIED | A5 device acceptance. |
+| Bad input, wrong code and stale-code rejection | NOT VERIFIED | A5 device acceptance. |
+| Pairing screenshot and recents protection | NOT VERIFIED | A5 device acceptance. |
+| Disconnect, reopen, connection loss, STOP and restart | NOT VERIFIED | A5 device acceptance. |
+| Owner uninstall and Termux session preservation | NOT VERIFIED | A5 device acceptance. |
 
 ## 7. Uninstall · owner action
 

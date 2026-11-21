@@ -11,12 +11,17 @@ import static org.junit.Assert.assertTrue;
 
 public class DeckEndpointTest {
     @Test
-    public void onlyReviewedDeckAndAuthenticationRoutesAreAllowed() {
+    public void onlyReviewedDeckAndItsActionsAreAllowed() {
         assertEquals("/", DeckEndpoint.allowedPath(DeckEndpoint.ROOT, "GET", true));
         assertEquals("/app.js", DeckEndpoint.allowedPath(DeckEndpoint.ORIGIN + "/app.js", "GET", false));
         assertEquals("/state", DeckEndpoint.allowedPath(DeckEndpoint.ORIGIN + "/state", "GET", false));
         assertEquals("/auth", DeckEndpoint.allowedPath(DeckEndpoint.ORIGIN + "/auth", "POST", false));
-        for (String path : new String[]{"/start", "/stop", "/open", "/resume", "/state", "/download/id"}) {
+        for (String path : new String[]{"/start", "/stop", "/open", "/resume"}) {
+            assertEquals(path, DeckEndpoint.allowedPath(DeckEndpoint.ORIGIN + path, "POST", false));
+            assertNull(path, DeckEndpoint.allowedPath(DeckEndpoint.ORIGIN + path, "GET", false));
+            assertNull(path, DeckEndpoint.allowedPath(DeckEndpoint.ORIGIN + path, "POST", true));
+        }
+        for (String path : new String[]{"/state", "/download/id"}) {
             assertNull(path, DeckEndpoint.allowedPath(DeckEndpoint.ORIGIN + path, "POST", false));
         }
         assertNull(DeckEndpoint.allowedPath(DeckEndpoint.ORIGIN + "/state", "GET", true));
@@ -44,12 +49,27 @@ public class DeckEndpointTest {
         assertTrue(DeckEndpoint.validCode(code));
         assertFalse(DeckEndpoint.validCode(code + "\n"));
         assertFalse(DeckEndpoint.validCode(code.substring(1)));
-        assertThrows(IllegalArgumentException.class, () -> DeckEndpoint.authenticationScript("'" + code));
-        String script = DeckEndpoint.authenticationScript(code);
+        assertThrows(IllegalArgumentException.class, () -> DeckEndpoint.authenticationScript("'" + code, null));
+        String script = DeckEndpoint.authenticationScript(code, null);
         assertTrue(script.contains("redirect: 'error'"));
         assertTrue(script.contains("'X-Launch-Token': '" + code + "'"));
         assertFalse(script.contains("#" + code));
         assertFalse(script.contains("?" + code));
+    }
+
+    @Test
+    public void onlyCanonicalIdsCanBeRestoredAndZipLinksStayDeferred() {
+        String code = "z".repeat(43);
+        String id = "a0".repeat(16);
+        String invalid = "'" + id;
+        assertTrue(DeckEndpoint.authenticationScript(code, id).contains("savedId = '" + id + "'"));
+        assertFalse(DeckEndpoint.authenticationScript(code, invalid).contains(invalid));
+        String download = "/download/" + id;
+        assertTrue(DeckEndpoint.isExport(DeckEndpoint.ORIGIN + download));
+        assertFalse(DeckEndpoint.isExport("http://example.invalid" + download));
+        assertFalse(DeckEndpoint.isExport(DeckEndpoint.ORIGIN + download + "?x"));
+        assertNull(DeckEndpoint.allowedPath(DeckEndpoint.ORIGIN + download, "GET", true));
+        assertNull(DeckEndpoint.allowedPath(DeckEndpoint.ORIGIN + download, "GET", false));
     }
 
     @Test
