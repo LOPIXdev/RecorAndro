@@ -147,6 +147,20 @@ final class DeckEndpoint {
                   if (location.href !== '%s') return;
                   const deck = document.querySelector('main');
                   deck.inert = true;
+                  document.querySelector('#ready .share-note p').textContent =
+                    'Tap Download on a verified ZIP, then choose Save As or Share.';
+                  const audio = document.getElementById('audio');
+                  const aacNotice = document.createElement('p');
+                  aacNotice.className = 'support-note';
+                  aacNotice.setAttribute('role', 'status');
+                  document.getElementById('audio-info').after(aacNotice);
+                  const updateAacNotice = () => {
+                    aacNotice.textContent = /\\.aac$/i.test(audio.files[0]?.name || '')
+                      ? 'Raw AAC duration cannot always be verified. Use an M4A, MP3 or WAV recording if RecorAndro cannot establish the duration.'
+                      : '';
+                  };
+                  audio.addEventListener('change', updateAacNotice);
+                  document.getElementById('new-session').addEventListener('click', updateAacNotice);
                   const fetchLocal = window.fetch.bind(window);
                   window.fetch = (input, options) => fetchLocal(input, {...options, redirect: 'error'});
                   let report = () => ['pending', ''];

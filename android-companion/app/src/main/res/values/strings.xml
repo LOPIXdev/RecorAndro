@@ -18,5 +18,19 @@
     <string name="stopped">Deck stopped. Restart the adapter in Termux for a new code.</string>
     <string name="picker_unavailable">Android Files is unavailable.</string>
     <string name="picker_rejected">Choose one readable recording or up to eight readable photos in Android Files.</string>
-    <string name="export_deferred">Open the Deck in Chrome to download or share verified ZIPs.</string>
+    <string name="picker_permission_denied">Android Files did not grant access to the selection. Choose a file you can read.</string>
+    <string name="zip_preparing">Preparing verified ZIP…</string>
+    <string name="zip_saving">Saving ZIP…</string>
+    <string name="zip_save_as">Save As</string>
+    <string name="zip_share">Share</string>
+    <string name="zip_share_title">Share verified ZIP</string>
+    <string name="zip_saved">ZIP saved.</string>
+    <string name="zip_rejected">Termux refused this ZIP. Reopen the session to refresh verified exports.</string>
+    <string name="zip_failed">Could not complete the ZIP transfer. Check Termux and try the export again.</string>
+    <string name="zip_no_space">There is insufficient space to prepare this ZIP. Free device space and try again.</string>
+    <string name="zip_invalid">The transfer did not contain a readable ZIP. Reopen the session and try again.</string>
+    <string name="zip_destination_failed">Android Files did not grant access to the save location. Choose another location.</string>
+    <string name="zip_save_failed">ZIP could not be saved.</string>
+    <string name="zip_partial">The save did not complete. Check the destination for an incomplete file.</string>
+    <string name="zip_share_failed">Could not open Android Share.</string>
 </resources>

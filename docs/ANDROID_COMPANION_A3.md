@@ -2,8 +2,13 @@
 
 A3 opens the existing New Run, Processing and Exports views in the Android
 companion. Termux owns adapter startup, FFmpeg, session storage and verification.
-The [owner-accepted A2 gate](ANDROID_COMPANION_A2_DEVICE_GATE.md) covers physical
-installation, pairing and Deck rendering. A3 still needs Redmi verification.
+**A3 core device acceptance · PASS.** The owner reported installing the A3
+debug APK on a Xiaomi Redmi Note 10 Pro, pairing with the live Termux adapter,
+selecting a recording through Android Files, and reaching visible ZIP entries
+in Exports after processing completed. The physical acceptance covers those
+observations. Native ZIP Save As, Android Share and interrupted-session recovery
+remain **NOT VERIFIED** on Redmi and are A4 work.
+[Owner-accepted A2 gate](ANDROID_COMPANION_A2_DEVICE_GATE.md)
 
 ## Install and run
 
@@ -89,15 +94,12 @@ the retained ID and displayed Exports. Back disconnected the APK while the
 adapter still responded. This test used
 the Windows Python/FFmpeg backend with a disposable root.
 
-## Redmi checks to record
+## Remaining Redmi checks
 
-- Test the app offline with a disposable root and files. Confirm the original
-  Deck fits in portrait and landscape, including the session menu, progress
-  and verified Exports list. Check Back and return from Android Files.
-- Cancel Android Files and verify that it creates no session. Select one audio
-  file and try selecting and clearing optional photos. Complete a short
-  zero-photo run with archive OFF. Record the session ID from Processing and
-  compare it with the retained run opened from the session menu.
+- With a disposable root and files, check offline use, portrait and landscape,
+  Back, and picker cancellation. Check optional photo selection and clearing.
+  Compare the session ID shown during Processing with the retained run opened
+  from the session menu.
 - Stop and restart the adapter while idle. Check the stale connection state,
   pair with a fresh code and reopen the same session ID. Record whether any
   issue was specific to MIUI, the WebView provider or a document provider.
@@ -108,6 +110,6 @@ the Windows Python/FFmpeg backend with a disposable root.
 Only reviewed Deck assets run in the WebView. Local HTTP can still be imitated
 by a process occupying the same port, so confirm the live Termux launch before
 entering the code. Keep launch codes, cookies, CSRF values and private media
-names out of test evidence. A4 covers authenticated ZIP delivery and sharing,
-plus interrupted-session recovery and receiver-side verification. MIUI process
-survival and physical renderer-failure recovery still require device evidence.
+names out of test evidence. MIUI process survival and physical renderer-failure
+recovery still require device evidence.
+[A4 export and recovery guide](ANDROID_COMPANION_A4.md)

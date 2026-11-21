@@ -69,8 +69,12 @@ final class DeckFileChooser {
         Uri[] selection = null;
         try {
             selection = validatedSelection(data);
+        } catch (SecurityException exception) {
+            cancel();
+            Toast.makeText(activity, R.string.picker_permission_denied, Toast.LENGTH_LONG).show();
+            return;
         } catch (RuntimeException exception) {
-            // Malformed provider results are handled in the same way as a denied grant.
+            // Malformed provider results are refused without opening them.
         }
         if (selection == null) {
             Toast.makeText(activity, R.string.picker_rejected, Toast.LENGTH_LONG).show();
@@ -93,10 +97,12 @@ final class DeckFileChooser {
             Uri uri = clip == null ? data.getData() : clip.getItemAt(index).getUri();
             if (uri == null || !"content".equals(uri.getScheme()) || uri.getAuthority() == null
                     || uri.getUserInfo() != null || !DocumentsContract.isDocumentUri(activity, uri)
-                    || activity.checkUriPermission(uri, Process.myPid(), Process.myUid(),
-                            Intent.FLAG_GRANT_READ_URI_PERMISSION) != PackageManager.PERMISSION_GRANTED
                     || !seen.add(uri)) {
                 return null;
+            }
+            if (activity.checkUriPermission(uri, Process.myPid(), Process.myUid(),
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION) != PackageManager.PERMISSION_GRANTED) {
+                throw new SecurityException("Missing document read grant");
             }
             selection[index] = uri;
         }

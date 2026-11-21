@@ -2,7 +2,7 @@ plugins {
     id 'com.android.application' version '8.7.3'
 }
 
-layout.buildDirectory = layout.projectDirectory.dir('build/a3')
+layout.buildDirectory = layout.projectDirectory.dir('build/a4')
 
 android {
     namespace 'dev.lopix.recorandro.companion'
@@ -13,8 +13,8 @@ android {
         applicationId 'dev.lopix.recorandro.companion'
         minSdk 31
         targetSdk 34
-        versionCode 2
-        versionName '0.2.0-a3'
+        versionCode 3
+        versionName '0.2.0-a4'
     }
 
     compileOptions {
@@ -31,5 +31,8 @@ android {
 }
 
 dependencies {
+    implementation('androidx.core:core:1.15.0') {
+        exclude group: 'androidx.profileinstaller', module: 'profileinstaller'
+    }
     testImplementation 'junit:junit:4.13.2'
 }

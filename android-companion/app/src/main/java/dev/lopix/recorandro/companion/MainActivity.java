@@ -3,6 +3,7 @@ package dev.lopix.recorandro.companion;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -29,7 +30,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 import android.window.OnBackInvokedDispatcher;
 
 import org.json.JSONArray;
@@ -55,18 +55,23 @@ public final class MainActivity extends Activity {
     private Button disconnect;
     private TextView status;
     private DeckFileChooser chooser;
+    private ZipExport zipExport;
     private WebView deck;
     private int deckAttempt;
     private String pendingCode;
     private String lastSessionId;
+    private SharedPreferences recovery;
     private boolean foreground;
+    private boolean recheckAfterExport;
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         protectWindow();
-        lastSessionId = state == null ? null : state.getString(LAST_SESSION);
+        recovery = getSharedPreferences("recovery", MODE_PRIVATE);
+        lastSessionId = recovery.getString(LAST_SESSION, null);
         chooser = new DeckFileChooser(this);
+        zipExport = new ZipExport(this);
         layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
@@ -227,6 +232,17 @@ public final class MainActivity extends Activity {
         if (view == null || !foreground) {
             return;
         }
+        // The adapter holds the session lock while serving a verified ZIP.
+        if (zipExport.isFetching()) {
+            recheckAfterExport = true;
+            handler.postDelayed(heartbeat, 500);
+            return;
+        }
+        if (recheckAfterExport) {
+            recheckAfterExport = false;
+            setStatus(R.string.checking);
+            view.evaluateJavascript(DeckEndpoint.RECHECK_SCRIPT, null);
+        }
         handler.removeCallbacks(rendererUnresponsive);
         handler.postDelayed(rendererUnresponsive, 9000);
         view.evaluateJavascript(DeckEndpoint.STATUS_SCRIPT, value -> {
@@ -245,10 +261,13 @@ public final class MainActivity extends Activity {
         try {
             JSONArray response = new JSONArray(value == null ? "[]" : value);
             String sessionId = response.optString(1);
-            if (DeckEndpoint.validSessionId(sessionId)) {
+            String connection = response.optString(0);
+            if ((pairing.isAuthenticated() || "connected".equals(connection))
+                    && DeckEndpoint.validSessionId(sessionId) && !sessionId.equals(lastSessionId)) {
                 lastSessionId = sessionId;
+                recovery.edit().putString(LAST_SESSION, sessionId).apply();
             }
-            switch (response.optString(0)) {
+            switch (connection) {
                 case "rejected" -> close(R.string.rejected);
                 case "failed" -> close(R.string.failed);
                 case "stopped" -> close(R.string.stopped);
@@ -291,7 +310,9 @@ public final class MainActivity extends Activity {
         pairing.close();
         handler.removeCallbacksAndMessages(null);
         pendingCode = null;
+        recheckAfterExport = false;
         chooser.cancel();
+        zipExport.cancel();
         connectionForm.setVisibility(View.VISIBLE);
         codeField.getText().clear();
         codeField.setEnabled(true);
@@ -341,7 +362,7 @@ public final class MainActivity extends Activity {
     @Override
     protected void onStop() {
         foreground = false;
-        if (chooser.isOpen()) {
+        if (chooser.isOpen() || zipExport.isPicking()) {
             handler.removeCallbacks(heartbeat);
             handler.removeCallbacks(rendererUnresponsive);
         } else {
@@ -354,14 +375,7 @@ public final class MainActivity extends Activity {
     protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
         chooser.onResult(request, result, data);
-    }
-
-    @Override
-    protected void onSaveInstanceState(Bundle state) {
-        super.onSaveInstanceState(state);
-        if (DeckEndpoint.validSessionId(lastSessionId)) {
-            state.putString(LAST_SESSION, lastSessionId);
-        }
+        zipExport.onResult(request, result, data);
     }
 
     @Override
@@ -369,6 +383,7 @@ public final class MainActivity extends Activity {
         if (deck != null) {
             close(R.string.idle);
         }
+        zipExport.destroy();
         worker.shutdownNow();
         super.onDestroy();
     }
@@ -384,9 +399,11 @@ public final class MainActivity extends Activity {
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-            if (request.hasGesture() && "GET".equals(request.getMethod())
+            if (view == deck && foreground && pairing.isAuthenticated()
+                    && DeckEndpoint.ROOT.equals(view.getUrl()) && request.isForMainFrame()
+                    && request.hasGesture() && !request.isRedirect() && "GET".equals(request.getMethod())
                     && DeckEndpoint.isExport(request.getUrl().toString())) {
-                Toast.makeText(MainActivity.this, R.string.export_deferred, Toast.LENGTH_LONG).show();
+                zipExport.start(request.getUrl().toString(), CookieManager.getInstance().getCookie(DeckEndpoint.ROOT));
             }
             return true; // The only page navigation is the initial app-directed load.
         }
