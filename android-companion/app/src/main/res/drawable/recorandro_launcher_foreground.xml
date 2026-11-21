@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Center the 56 dp Deck tile within the 108 dp adaptive layer. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/recorandro_deck_mark"
+    android:inset="24.074074%" />

@@ -1,19 +1,20 @@
 # RecorAndro Companion A5 release evidence
 
-**Status · AWAITING_SIGNING.** The proposed candidate is
-`v0.2.0-android-rc1`, subject to owner approval. Physical acceptance of an A5
-release-signed APK is **DEVICE_ACCEPTANCE_PENDING**. A4's owner-reported Redmi
-PASS covers installing and launching the debug app, completing audio
-processing, and seeing verified ZIP entries. Device Save As, Share and
-interrupted recovery remain open. [A4 device evidence](ANDROID_COMPANION_A4.md)
+**Final-icon RC1 · AWAITING_SIGNING.** Code-freeze scope is limited to the
+launcher mark and release evidence. Physical acceptance of the final
+`v0.2.0-android-rc1` APK is **DEVICE_ACCEPTANCE_PENDING**. The owner-reported A4
+Redmi PASS covers installing and launching the debug app, completing audio
+processing, and seeing verified ZIP entries. Physical Save As, Share and
+interrupted recovery remain **NOT VERIFIED**. [A4 device evidence](ANDROID_COMPANION_A4.md)
 
 ## Reviewed baseline and package
 
 A5 started on clean `main` at `e79c0b0fe85256ab4e974270ddb4191a030fc051`,
 matching local `origin/main` and live GitHub `main`. Live GitHub had no tags or
 published releases. The public API check does not cover private release drafts.
-The A4 implementation is already in that commit. The A4 evidence update and
-A5 preparation are in the working tree. [GitHub releases](https://github.com/LOPIXdev/RecorAndro/releases)
+The icon freeze started on clean `main` at
+`3cdfff891ae83d54dab83b6a5baea6f229be800f`, which records the A4 evidence, A5
+preparation and the prior signed APK. [GitHub releases](https://github.com/LOPIXdev/RecorAndro/releases)
 
 | Item | A5 proposal |
 | --- | --- |
@@ -23,7 +24,8 @@ A5 preparation are in the working tree. [GitHub releases](https://github.com/LOP
 | Toolchain | Eclipse Temurin `17.0.21.1+2`, Gradle `8.9`, Android Gradle Plugin `8.7.3`, Build Tools `34.0.0` |
 | Direct dependencies | AndroidX Core `1.15.0` for FileProvider, JUnit `4.13.2` for JVM tests |
 | Permissions and components | `INTERNET`. Launcher Activity exported. ZIP FileProvider non-exported, with URI grants scoped to app-private ZIP cache. |
-| Signing | Owner-controlled release key off-repository. A2–A4 use the local debug signer. |
+| Signing | Same owner-controlled release certificate as the prior RC1. A2–A4 use the local debug signer. |
+| Launcher | The Processing Deck's existing `.deck-mark` tile, with the same colors, proportions and 28° strokes inside the Android adaptive mask. |
 
 The recorded SDKs are for owner sideloading. Target API 34 exceeds the Android
 14 and Android 15 platform installation floors. The Android 12 Redmi remains
@@ -43,9 +45,9 @@ ZIP registry verification. Cleartext loopback relies on the owner checking the
 live Termux adapter before entering the launch code. [A1 architecture](ANDROID_COMPANION_ARCHITECTURE.md) ·
 [Frozen Python/browser release](V0_1_FREEZE.md)
 
-## A5 verification results
+## Prior A5 verification and signing
 
-The working-tree preflight produced a **4,935,652-byte unsigned APK** with
+The original A5 preflight produced a **4,935,652-byte unsigned APK** with
 SHA-256 `8ecd0275ff0ad19eef2e181d45d3a38154b525243d65d17a0085e62dd62e4c26`.
 `aapt2` confirmed the proposed identity and SDKs, a non-debuggable release,
 backups disabled, one exported launcher, a non-exported ZIP provider with
@@ -55,7 +57,15 @@ has no APK-native ABI requirement. Termux supplies the tools for the phone's ABI
 The only `assets/` entries are ART baseline profiles. The 65-entry APK inventory
 had no Deck copies, keystores, audio, session data, logs or launch credentials.
 The ignored files are local tools and fixtures, build output, local data and
-caches. No ignored product files were tracked, and the index had no staged files.
+caches.
+
+The [previously signed RC1](../final-apk/recorandro-companion-v0.2.0-android-rc1.apk)
+is **SUPERSEDED** by the final-icon build. It remains available as historical
+evidence. Its verified APK SHA-256 is
+`420e0ecda86113cbf298e1bcb9075b7caa08fce8efb98c8cf6dfeb1cc8f56362`.
+The release certificate SHA-256 is
+`180ac304237015f409f8c8b0014bf89d59152e957a01aaf0d3fce777a0b6191e`.
+The final APK must verify against that certificate.
 
 | Check | A5 host result | Physical A5 Redmi |
 | --- | --- | --- |
@@ -63,11 +73,28 @@ caches. No ignored product files were tracked, and the index had no staged files
 | Lint and native tests | PASS. Nine JVM tests covered route, port and token validation, repeated Connect, session ID restoration and ZIP length, filename and corruption checks. Lint had zero errors and two warnings for target API 34 and the conservative cache-space check. | **NOT VERIFIED**. |
 | Authentication, picker cancellation, repeated Start, and original/ZIP integrity | PASS in seven focused adapter tests. Covered Host/Origin/cookie/CSRF, a truncated upload, busy Stop, canonical Resume, optional archive failure and corrupt ZIP refusal. Python, the tests and Deck source match the freeze. | **NOT VERIFIED** for A5. A4 owner PASS covers installation, launch, processing and visible exports only. |
 | Real M4A, Save As, Share and interruption recovery | A4 Android 12 emulator evidence exists. A5 validation is limited to this unsigned release's host checks. | **NOT VERIFIED**. See the owner test sheet. |
-| Production signer, signed APK size/digest and signature | **AWAITING_SIGNING**. The owner intends to configure signing locally. The four required variables were unavailable in this session. | **DEVICE_ACCEPTANCE_PENDING**. |
+| Production signer, signed APK size/digest and signature | PASS for the superseded signed RC1. See the APK and certificate fingerprints above. | **NOT VERIFIED**. |
 
 Both the Deck JavaScript and the companion's injected script passed syntax
 checks. Local documentation links and `git diff --check` passed. The historical
 full Android suite was outside the A5 verification scope.
+
+## Final-icon RC1 verification
+
+The [Deck CSS mark](../recorandro/mobile_web/style.css#L62) supplies the tile
+shape, two rotated strokes and exact palette. The adaptive launcher uses the
+Deck canvas behind a centered copy of the complete tile. A geometry check and
+rendered comparison matched the CSS and verified fit within Android's mask-safe
+area. The app label, layout and code remain the reviewed A5 values.
+[Android adaptive icon guidance](https://developer.android.com/develop/ui/views/launch/icon_design_adaptive)
+
+| Check | Final-icon result |
+| --- | --- |
+| Release build and package verification | PASS for the unsigned APK. AAPT resolved the launcher to an adaptive icon with both layers. Package `dev.lopix.recorandro.companion`, version `0.2.0-android-rc1` / code `4`, min API `31`, target API `34` and the prior APK permissions matched. APK alignment and ZIP CRC passed. |
+| Focused tests | Nine release JVM tests passed. Release lint reported zero errors and three warnings for target API 34, the cache-space check and the optional monochrome launcher layer. The Deck, Python engine, Java companion logic and permission policy resources match the code-freeze baseline. |
+| Final unsigned output | `android-companion/app/build/a5/outputs/apk/release/app-release-unsigned.apk`, **4,937,928 bytes**, SHA-256 `092aac3c4d8f96d22b4b970c588595b18bdbbb4b9c086de869b552325044813c`. |
+| Final signed output | **AWAITING_SIGNING**. Expected path is `android-companion/app/build/a5/outputs/apk/release/recorandro-companion-v0.2.0-android-rc1-final.apk`. Record the final signed digest only after signature verification with the established RC1 certificate. |
+| Physical Redmi | **DEVICE_ACCEPTANCE_PENDING** for the final-icon build. Save As, Share and interrupted recovery remain **NOT VERIFIED** on the Redmi. |
 
 ## Build and local signing
 
@@ -79,7 +106,7 @@ $toolchain = (Resolve-Path android-companion/.toolchain).Path
 $env:JAVA_HOME = Join-Path $toolchain 'jdk-17.0.21.1+2'
 $env:ANDROID_HOME = Join-Path $toolchain 'sdk'
 $env:GRADLE_USER_HOME = Join-Path $toolchain 'gradle-home'
-& (Join-Path $toolchain 'gradle-8.9\bin\gradle.bat') --offline --no-daemon -p android-companion :app:assembleRelease :app:lintRelease :app:testReleaseUnitTest
+& (Join-Path $toolchain 'gradle-8.9\bin\gradle.bat') --offline --no-daemon --rerun-tasks -p android-companion :app:assembleRelease :app:lintRelease :app:testReleaseUnitTest
 ```
 
 Gradle leaves `android-companion/app/build/a5/outputs/apk/release/app-release-unsigned.apk`
@@ -88,7 +115,7 @@ install it. A debug-signed build is suitable for debug testing. A release-signed
 APK is a candidate for owner acceptance. A published GitHub Release is a
 separate owner-approved action. [Android signing](https://developer.android.com/studio/publish/app-signing)
 
-The owner creates or selects the release keystore **outside the checkout** and
+The owner uses the existing release keystore **outside the checkout** and
 makes these values available only in the local signing process. Keep the
 keystore and passwords out of chat, files under the repository and command
 history. The command passes password variable names to `apksigner`.
@@ -105,9 +132,10 @@ In a local PowerShell 7 signing terminal, password values can be entered with
 process and its children. A session performing the signing needs those variables
 in its own process environment.
 
-After approval of the proposed version and local signing setup, use the
-following in the same PowerShell environment. Use the owner-controlled release
-identity for future updates and keep its certificate SHA-256 in the evidence.
+Use the following in the same PowerShell environment with the existing key.
+The build-local signing helper performs the same checks and clears its password
+variables after use. The output path distinguishes the final-icon APK from the
+superseded build.
 
 ```powershell
 $signingNames = @('RECORANDRO_RELEASE_KEYSTORE', 'RECORANDRO_RELEASE_KEY_ALIAS',
@@ -127,8 +155,11 @@ if ($store.PSIsContainer -or (-not [IO.Path]::IsPathRooted($relativeStore) -and
 $buildTools = Join-Path $env:ANDROID_HOME 'build-tools\34.0.0'
 $out = 'android-companion/app/build/a5/outputs/apk/release'
 $unsigned = Join-Path $out 'app-release-unsigned.apk'
-$candidate = Join-Path $out 'recorandro-companion-v0.2.0-android-rc1.apk'
+$candidate = Join-Path $out 'recorandro-companion-v0.2.0-android-rc1-final.apk'
 if (Test-Path -LiteralPath $candidate) { throw 'A signed candidate already exists at this path.' }
+if ((Get-FileHash -LiteralPath $unsigned -Algorithm SHA256).Hash -ne '092aac3c4d8f96d22b4b970c588595b18bdbbb4b9c086de869b552325044813c') {
+    throw 'The unsigned APK does not match the reviewed final-icon build.'
+}
 & (Join-Path $buildTools 'zipalign.exe') -c 4 $unsigned
 if ($LASTEXITCODE -ne 0) { throw 'The unsigned APK failed alignment verification.' }
 & (Join-Path $buildTools 'apksigner.bat') sign --min-sdk-version 31 `
@@ -138,8 +169,8 @@ if ($LASTEXITCODE -ne 0) { throw 'The unsigned APK failed alignment verification
 if ($LASTEXITCODE -ne 0) { throw 'Candidate signing failed.' }
 $signature = & (Join-Path $buildTools 'apksigner.bat') verify --min-sdk-version 31 --verbose --print-certs $candidate
 if ($LASTEXITCODE -ne 0) { throw 'Candidate signature verification failed.' }
-if ($signature -match '805406a272bc9a43047b889f541c8e72b11194969810ddce317eab0b050f73d3') {
-    throw 'The candidate uses the A2–A4 debug certificate.'
+if (-not ($signature -match 'certificate SHA-256 digest: 180ac304237015f409f8c8b0014bf89d59152e957a01aaf0d3fce777a0b6191e$')) {
+    throw 'The APK does not use the established RC1 certificate.'
 }
 $signature | Select-String 'Verifies|certificate SHA-256 digest'
 & (Join-Path $buildTools 'aapt2.exe') dump badging $candidate
@@ -153,8 +184,9 @@ signing environment local to the signing process. [APK signing tool](https://dev
 
 ## Redmi owner test sheet
 
-Use the release-signed candidate once available. Record APK SHA-256, signer
-fingerprint, version, model, Android/MIUI, WebView, and Termux version/source.
+Use the final-icon release-signed candidate once available. Confirm the Deck
+mark appears on the Redmi launcher. Record APK SHA-256, signer fingerprint,
+version, model, Android/MIUI, WebView, and Termux version/source.
 If Android refuses an in-place update from A4 because the signer differs,
 record the last session ID first. The owner may uninstall only the debug
 companion and then install the reviewed candidate. Termux and its separate data
@@ -203,7 +235,8 @@ python -m recorandro.mobile_ui --port 8765
 ## Release-note draft and approval
 
 **RecorAndro Companion v0.2.0 Android RC1** brings the existing Processing Deck
-into an Android app. Start the reviewed adapter manually in Termux, pair locally,
+into an Android app. The launcher uses the Deck's existing aubergine mark.
+Start the reviewed adapter manually in Termux, pair locally,
 choose a recording, follow Processing, and save or share verified part ZIPs.
 Reopen an existing session ID and use Resume when the adapter allows it.
 Optional photos and the opt-in Full Archive follow the existing Deck behavior.
@@ -217,10 +250,9 @@ The active Processing screenshot and independent receiver ZIP SHA-256 remain
 **DEFERRED / NOT VERIFIED** on the physical Redmi. An emulator screenshot or
 receiver comparison leaves those deferrals open. [Original RC1 deferrals](V0_1_RELEASE_EVIDENCE.md#deferred-checks-for-rc1)
 
-Propose `docs: record limited A4 Redmi acceptance` for the A4 evidence and
-`build: prepare Android companion release candidate` for A5 preparation. After
-owner approval, build from the reviewed clean commit and record its SHA with
-the signed artifact. After device acceptance and separate tag approval, propose
+Propose `chore(android): freeze RC1 with the Processing Deck launcher icon` for
+the icon and updated evidence. Record the reviewed source commit with the
+final-icon signed artifact. After device acceptance and separate tag approval, propose
 annotated tag `v0.2.0-android-rc1` on that exact commit. The Termux/browser
 `v0.1-rc1` release remains a separate decision. Publication requires its own
 approval.
