@@ -1,8 +1,12 @@
 # RecorAndro Companion A4
 
-**Physical A4 Redmi status · NOT VERIFIED.** The owner accepted [A3 on the
-Redmi](ANDROID_COMPANION_A3.md) for installation, pairing, recording selection,
-processing and visible ZIP exports. A4 adds the native export and recovery flow.
+**Physical A4 Redmi status · LIMITED PASS.** The owner reported installing the
+latest A4 debug APK (`0.2.0-a4`) on a Xiaomi Redmi Note 10 Pro. The companion
+launched, audio processing completed, and verified ZIP entries appeared in
+Exports. This is the extent of the physical PASS. The owner did not provide a
+device-side APK digest or full version inventory. Native Save As, Android
+Share and interrupted-session recovery remain **NOT VERIFIED** on the Redmi
+and carry forward to A5. [Prior A3 device evidence](ANDROID_COMPANION_A3.md)
 
 ## Build and install
 
@@ -65,7 +69,8 @@ matched the registry SHA-256, and the separate Android receiving app read the
 shared ZIP through a read-only `content://` grant and independently matched
 the registry SHA-256 and byte count. Cancelling the Sharesheet did not launch
 the receiver. These tests used the existing Windows-hosted adapter over
-ADB loopback and a disposable root. Redmi and MIUI behavior remain unverified.
+ADB loopback and a disposable root. Physical Save As, Share, interruption
+recovery and MIUI process survival remain unverified.
 
 ## Export and recovery behavior
 

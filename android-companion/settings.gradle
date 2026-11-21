@@ -7,7 +7,7 @@ pluginManagement {
 }
 
 if (gradle.gradleVersion != '8.9') {
-    throw new GradleException('The A2 companion build requires Gradle 8.9.')
+    throw new GradleException('The companion build requires Gradle 8.9.')
 }
 
 dependencyResolutionManagement {

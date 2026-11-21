@@ -2,7 +2,7 @@ plugins {
     id 'com.android.application' version '8.7.3'
 }
 
-layout.buildDirectory = layout.projectDirectory.dir('build/a4')
+layout.buildDirectory = layout.projectDirectory.dir('build/a5')
 
 android {
     namespace 'dev.lopix.recorandro.companion'
@@ -13,8 +13,8 @@ android {
         applicationId 'dev.lopix.recorandro.companion'
         minSdk 31
         targetSdk 34
-        versionCode 3
-        versionName '0.2.0-a4'
+        versionCode 4
+        versionName '0.2.0-android-rc1'
     }
 
     compileOptions {
@@ -26,6 +26,16 @@ android {
         debug {
             storeFile rootProject.file('.toolchain/a2-debug.keystore')
             storeType 'pkcs12'
+        }
+    }
+
+    buildTypes {
+        debug {
+            versionNameSuffix '-debug'
+        }
+        release {
+            // Ship only after the unsigned output is signed with the owner's external key.
+            signingConfig = null
         }
     }
 }
