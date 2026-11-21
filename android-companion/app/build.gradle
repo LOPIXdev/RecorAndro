@@ -1,0 +1,33 @@
+plugins {
+    id 'com.android.application' version '8.7.3'
+}
+
+android {
+    namespace 'dev.lopix.recorandro.companion'
+    compileSdk 35
+    buildToolsVersion '34.0.0'
+
+    defaultConfig {
+        applicationId 'dev.lopix.recorandro.companion'
+        minSdk 31
+        targetSdk 34
+        versionCode 1
+        versionName '0.2.0-a2'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    signingConfigs {
+        debug {
+            storeFile rootProject.file('.toolchain/a2-debug.keystore')
+            storeType 'pkcs12'
+        }
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+}

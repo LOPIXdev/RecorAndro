@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">RecorAndro Companion</string>
+    <string name="instructions">Start the Processing Deck manually in Termux. Confirm the live terminal shows http://127.0.0.1:8765, then type the code after #.</string>
+    <string name="scope">Read-only preview. File picker, download and Share: NOT IMPLEMENTED.</string>
+    <string name="launch_code">Launch code</string>
+    <string name="connect">Connect</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="idle">Disconnected. Waiting for your Termux launch.</string>
+    <string name="connecting">Checking the local Deck and pairing…</string>
+    <string name="authenticated">Connected. The protected Processing Deck responded.</string>
+    <string name="invalid_code">Enter all 43 characters after # from the current Termux launch.</string>
+    <string name="offline">No response from the Deck on port 8765. Check Termux is installed, Python and FFmpeg are available, and the launch command is still running on this port.</string>
+    <string name="wrong_server">This port did not return the reviewed Deck. Check the checkout, the port and the live launch in Termux.</string>
+    <string name="rejected">Launch code rejected. Check the code in the current Termux launch. Restarting the adapter issues a new code.</string>
+    <string name="failed">Could not authenticate the protected Deck. Check the live Termux launch and Android System WebView before trying again.</string>
+    <string name="connection_lost">Connection lost. Check Termux and re-enter the current launch code.</string>
+</resources>
