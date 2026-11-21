@@ -1,6 +1,6 @@
 # RecorAndro Companion A5 release evidence
 
-**Final-icon RC1 · AWAITING_SIGNING.** Code-freeze scope is limited to the
+**Final-icon RC1 · SIGNED.** Code-freeze scope is limited to the
 launcher mark and release evidence. Physical acceptance of the final
 `v0.2.0-android-rc1` APK is **DEVICE_ACCEPTANCE_PENDING**. The owner-reported A4
 Redmi PASS covers installing and launching the debug app, completing audio
@@ -93,8 +93,13 @@ area. The app label, layout and code remain the reviewed A5 values.
 | Release build and package verification | PASS for the unsigned APK. AAPT resolved the launcher to an adaptive icon with both layers. Package `dev.lopix.recorandro.companion`, version `0.2.0-android-rc1` / code `4`, min API `31`, target API `34` and the prior APK permissions matched. APK alignment and ZIP CRC passed. |
 | Focused tests | Nine release JVM tests passed. Release lint reported zero errors and three warnings for target API 34, the cache-space check and the optional monochrome launcher layer. The Deck, Python engine, Java companion logic and permission policy resources match the code-freeze baseline. |
 | Final unsigned output | `android-companion/app/build/a5/outputs/apk/release/app-release-unsigned.apk`, **4,937,928 bytes**, SHA-256 `092aac3c4d8f96d22b4b970c588595b18bdbbb4b9c086de869b552325044813c`. |
-| Final signed output | **AWAITING_SIGNING**. Expected path is `android-companion/app/build/a5/outputs/apk/release/recorandro-companion-v0.2.0-android-rc1-final.apk`. Record the final signed digest only after signature verification with the established RC1 certificate. |
+| Final signed output | **PASS**. Local artifact `android-companion/app/build/a5/outputs/apk/release/recorandro-companion-v0.2.0-android-rc1-final.apk`, **4,952,815 bytes**, SHA-256 `fdde3569ea2b759fc7acf1c74097db254c799c4af6b23594ed30b1b184700403`. APK Signature Scheme v3 verified with the established RC1 certificate above. The signed manifest resolves the adaptive icon to the expected canvas and Deck vector. The packaged vector matches the colors, geometry and rotation of the source mark. |
 | Physical Redmi | **DEVICE_ACCEPTANCE_PENDING** for the final-icon build. Save As, Share and interrupted recovery remain **NOT VERIFIED** on the Redmi. |
+
+The signed RC1 installed and paired with the existing localhost adapter on
+an Android 12 emulator. The [New run screenshot](assets/recorandro-app-android12.png)
+shows the connected Deck with an empty test root. The [1024 px launcher PNG](assets/recorandro-icon.png)
+comes from the same vector verified in the APK.
 
 ## Build and local signing
 
@@ -184,7 +189,7 @@ signing environment local to the signing process. [APK signing tool](https://dev
 
 ## Redmi owner test sheet
 
-Use the final-icon release-signed candidate once available. Confirm the Deck
+Use the final-icon release-signed candidate with the SHA-256 above. Confirm the Deck
 mark appears on the Redmi launcher. Record APK SHA-256, signer fingerprint,
 version, model, Android/MIUI, WebView, and Termux version/source.
 If Android refuses an in-place update from A4 because the signer differs,
@@ -233,6 +238,10 @@ python -m recorandro.mobile_ui --port 8765
    Record any remaining [A2 device checks](ANDROID_COMPANION_A2_DEVICE_GATE.md#6-record-evidence).
 
 ## Release-note draft and approval
+
+The [GitHub Release presentation draft](ANDROID_COMPANION_GITHUB_RELEASE.md)
+includes the launcher PNG and emulator screenshot. Its image URLs resolve after
+the portfolio files reach `main`.
 
 **RecorAndro Companion v0.2.0 Android RC1** brings the existing Processing Deck
 into an Android app. The launcher uses the Deck's existing aubergine mark.

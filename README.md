@@ -1,5 +1,11 @@
 # RecorAndro
 
+<img src="docs/assets/recorandro-icon.png" width="112" height="112" alt="RecorAndro launcher icon">
+
+RecorAndro Companion brings the local Processing Deck into an Android app.
+Termux runs the audio pipeline and keeps the original recordings and sessions.
+See the [Android Companion install guide](docs/ANDROID_COMPANION_RELEASE_EVIDENCE.md#redmi-owner-test-sheet).
+
 For one-command import through verified packages, see
 [process-audio usage and recovery](docs/PROCESS_AUDIO.md).
 For the Android browser UI and current device scope, see
